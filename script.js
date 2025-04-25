@@ -960,33 +960,21 @@ algorithmSelect.addEventListener('change', () => {
         // Hide general exploration strategy/epsilon
         if (strategyField) strategyField.style.display = 'none';
         if (epsilonField) epsilonField.style.display = 'none';
-    } else if (newAlgo === 'sr') {
-        // SR uses standard exploration, show strategy dropdown
-        if (strategyField) strategyField.style.display = '';
-         const currentStrategy = explorationStrategySelect.value;
-         if (currentStrategy === 'epsilon-greedy') {
-            if (epsilonField) epsilonField.style.display = '';
-            softmaxBetaControl.style.display = 'none';
-         } else { // Softmax
-            if (epsilonField) epsilonField.style.display = 'none';
-            softmaxBetaControl.style.display = '';
-         }
-         // SR specific LR controls (srWLRControl) are already shown above
-         // Main LR control is already hidden above
-    } else { // Handles QL, SARSA, ES, MC (non-AC, non-SR algos)
+    } else { // Handles QL, SARSA, ES, MC, SR (non-AC algos)
          // Show standard exploration strategy controls
          if (strategyField) strategyField.style.display = '';
          const currentStrategy = explorationStrategySelect.value;
-         if (currentStrategy === 'epsilon-greedy') {
-            if (epsilonField) epsilonField.style.display = '';
-            softmaxBetaControl.style.display = 'none';
-         } else { // Softmax
-            if (epsilonField) epsilonField.style.display = 'none';
-            softmaxBetaControl.style.display = '';
+         // Update visibility based on the CURRENTLY selected strategy
+         updateExplorationControlVisibility(currentStrategy);
+
+         if (newAlgo === 'sr') {
+             // SR specific LR controls (srWLRControl) are already shown above
+             // Main LR control is already hidden above
+         } else { // QL, SARSA, ES, MC
+             // Show main LR control for these algorithms
+             if (lrControl) lrControl.style.display = '';
+             // Ensure AC/SR specific LR controls remain hidden (done by default at start)
          }
-         // Show main LR control for these algorithms
-         if (lrControl) lrControl.style.display = '';
-         // Ensure AC/SR specific LR controls remain hidden (done by default at start)
     }
     // --- End Exploration Control Visibility ---
 
@@ -994,6 +982,22 @@ algorithmSelect.addEventListener('change', () => {
 
     console.log("Algorithm changed to:", newAlgo, "- Agent reset.");
 });
+
+// Helper function to update exploration control visibility
+function updateExplorationControlVisibility(strategy) {
+    const epsilonField = epsilonSlider.parentElement.parentElement;
+    if (strategy === 'epsilon-greedy') {
+        epsilonField.style.display = '';
+        softmaxBetaControl.style.display = 'none';
+    } else if (strategy === 'softmax') {
+        epsilonField.style.display = 'none';
+        softmaxBetaControl.style.display = '';
+    } else { // Handles 'random' and 'greedy'
+        epsilonField.style.display = 'none';
+        softmaxBetaControl.style.display = 'none';
+    }
+}
+
 explorationStrategySelect.addEventListener('change', () => {
     if (selectedAlgorithm !== 'actor-critic') {
         stopLearning();
@@ -1001,19 +1005,14 @@ explorationStrategySelect.addEventListener('change', () => {
         updateExplorationStrategy(newStrategy);
         updateExplanationText();
 
-        const epsilonField = epsilonSlider.parentElement.parentElement;
+        // Update slider visibility based on the newly selected strategy
+        updateExplorationControlVisibility(newStrategy);
 
-        if (newStrategy === 'epsilon-greedy') {
-            epsilonField.style.display = '';
-            softmaxBetaControl.style.display = 'none';
-        } else if (newStrategy === 'softmax') {
-            epsilonField.style.display = 'none';
-            softmaxBetaControl.style.display = '';
-        }
         drawEverything();
         console.log("Exploration strategy changed to:", newStrategy);
     }
 });
+
 terminateOnRewardCheckbox.addEventListener('change', updateTerminateOnGemSetting);
 speedSlider.addEventListener('input', updateSpeed);
 
@@ -1292,31 +1291,20 @@ async function initializeApp() {
         // Hide general exploration strategy/epsilon
         if (strategyField) strategyField.style.display = 'none';
         if (epsilonField) epsilonField.style.display = 'none';
-    } else if (initialAlgo === 'sr') {
-        // SR uses standard exploration, show strategy dropdown
-        if (strategyField) strategyField.style.display = '';
-         if (initialExplorationStrategy === 'epsilon-greedy') {
-            if (epsilonField) epsilonField.style.display = '';
-            softmaxBetaControl.style.display = 'none';
-         } else { // Softmax
-            if (epsilonField) epsilonField.style.display = 'none';
-            softmaxBetaControl.style.display = '';
-         }
-         // SR specific LR controls (srWLRControl) are already shown above
-         // Main LR control is already hidden above
-    } else { // Handles QL, SARSA, ES, MC (non-AC, non-SR algos)
+    } else { // Handles QL, SARSA, ES, MC, SR (non-AC algos)
          // Show standard exploration strategy controls
          if (strategyField) strategyField.style.display = '';
-         if (initialExplorationStrategy === 'epsilon-greedy') {
-            if (epsilonField) epsilonField.style.display = '';
-            softmaxBetaControl.style.display = 'none';
-         } else { // Softmax
-            if (epsilonField) epsilonField.style.display = 'none';
-            softmaxBetaControl.style.display = '';
+         // Update visibility based on the INITIAL strategy
+         updateExplorationControlVisibility(initialExplorationStrategy);
+
+         if (initialAlgo === 'sr') {
+             // SR specific LR controls (srWLRControl) are already shown above
+             // Main LR control is already hidden above
+         } else { // QL, SARSA, ES, MC
+             // Show main LR control for these algorithms
+             if (lrControl) lrControl.style.display = '';
+             // Ensure AC/SR specific LR controls remain hidden (done by default at start)
          }
-         // Show main LR control for these algorithms
-         if (lrControl) lrControl.style.display = '';
-         // Ensure AC/SR specific LR controls remain hidden (done by default at start)
     }
     // --- End Initial Exploration/Specific LR Visibility ---
 

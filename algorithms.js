@@ -210,12 +210,22 @@ function calculateSoftmaxProbabilities(values, beta = 1.0) {
 export function chooseAction(state, takeActionFuncForEnvLookup = null, currentAgentPosForLookup = null) { // Add optional args for SR Q calc
     ensureStateInitialized(state);
 
+    // Helper function for greedy action selection
+    const chooseGreedyAction = () => {
+        const bestActions = getBestActions(state, takeActionFuncForEnvLookup, currentAgentPosForLookup);
+        return bestActions[Math.floor(Math.random() * bestActions.length)];
+    };
+
+    // Helper function for random action selection
+    const chooseRandomAction = () => {
+        return actions[Math.floor(Math.random() * actions.length)];
+    };
+
     if (selectedAlgorithm === 'actor-critic') {
         // Actor-Critic always uses its learned policy (softmax over preferences)
         const preferences = actions.map(action => hTable[state][action]);
         const probabilities = calculateSoftmaxProbabilities(preferences, softmaxBeta);
-
-        // Sample action based on probabilities
+        // ... (sampling logic using probabilities) ...
         let cumulativeProb = 0;
         const randomSample = Math.random();
         for (let i = 0; i < actions.length; i++) {
@@ -233,11 +243,9 @@ export function chooseAction(state, takeActionFuncForEnvLookup = null, currentAg
 
         if (explorationStrategy === 'epsilon-greedy') {
             if (Math.random() < explorationRate) {
-                return actions[Math.floor(Math.random() * actions.length)];
+                return chooseRandomAction();
             } else {
-                // Exploit: Choose randomly among the best actions computed via SR
-                const bestActions = getBestActions(state, takeActionFuncForEnvLookup, currentAgentPosForLookup);
-                return bestActions[Math.floor(Math.random() * bestActions.length)];
+                return chooseGreedyAction(); // Use helper
             }
         } else if (explorationStrategy === 'softmax') {
             const qValues = actions.map(action => getQ(action));
@@ -253,29 +261,27 @@ export function chooseAction(state, takeActionFuncForEnvLookup = null, currentAg
             }
             // Fallback
             return actions[actions.length - 1];
+        } else if (explorationStrategy === 'random') { // NEW: Random Strategy for SR
+             return chooseRandomAction();
+        } else if (explorationStrategy === 'greedy') { // NEW: Greedy Strategy for SR
+             return chooseGreedyAction();
         } else {
             // Fallback SR exploration
             console.error("Unknown exploration strategy for SR:", explorationStrategy);
-            const bestActions = getBestActions(state, takeActionFuncForEnvLookup, currentAgentPosForLookup);
-            return bestActions[Math.floor(Math.random() * bestActions.length)];
+            return chooseGreedyAction(); // Fallback to greedy
         }
 
-    } else if (selectedAlgorithm === 'monte-carlo' || explorationStrategy === 'epsilon-greedy') {
-        // MODIFIED: Monte Carlo uses the chosen exploration strategy (like TD methods)
-        // Handle Epsilon-Greedy (used by MC or selected for TD)
+    } else { // Handles Q-Learning, SARSA, Expected SARSA, Monte Carlo
         if (explorationStrategy === 'epsilon-greedy') {
              if (Math.random() < explorationRate) {
-                return actions[Math.floor(Math.random() * actions.length)];
+                return chooseRandomAction();
              } else {
-                // Exploit: Choose randomly among the best actions (using qTable for MC/TD)
-                const bestActions = getBestActions(state);
-                return bestActions[Math.floor(Math.random() * bestActions.length)];
+                return chooseGreedyAction(); // Use helper
              }
         } else if (explorationStrategy === 'softmax') {
-             // Handle Softmax (used by MC or selected for TD)
-            const qValues = actions.map(action => qTable[state][action]); // MC uses qTable for behavior policy
+            const qValues = actions.map(action => qTable[state][action]);
             const probabilities = calculateSoftmaxProbabilities(qValues, softmaxBeta);
-
+            // ... (sampling logic using probabilities) ...
             let cumulativeProb = 0;
             const randomSample = Math.random();
             for (let i = 0; i < actions.length; i++) {
@@ -286,36 +292,25 @@ export function chooseAction(state, takeActionFuncForEnvLookup = null, currentAg
             }
             // Fallback
             return actions[actions.length - 1];
+        } else if (explorationStrategy === 'random') { // NEW: Random Strategy for TD/MC
+             return chooseRandomAction();
+        } else if (explorationStrategy === 'greedy') { // NEW: Greedy Strategy for TD/MC
+             return chooseGreedyAction();
         } else {
             // Fallback if exploration strategy is unknown for MC/TD
             console.error("Unknown exploration strategy for MC/TD:", explorationStrategy);
-            const bestActions = getBestActions(state);
-            return bestActions[Math.floor(Math.random() * bestActions.length)];
+             return chooseGreedyAction(); // Fallback to greedy
         }
-
-    } else if (explorationStrategy === 'softmax') { // This handles Softmax specifically for TD methods if needed differently (currently not)
-        // This block is now effectively covered by the combined block above,
-        // but kept separate logically in case TD+Softmax needed different handling.
-        // As is, it duplicates the softmax logic within the 'monte-carlo' || explorationStrategy block.
-        // We can simplify by removing this specific 'else if' block if the logic is identical.
-        // For now, keep it, but acknowledge potential redundancy based on current implementation.
-        const qValues = actions.map(action => qTable[state][action]);
-        const probabilities = calculateSoftmaxProbabilities(qValues, softmaxBeta);
-        // ... (sampling logic) ... // TODO: Implement or remove redundant block
-        return actions[actions.length - 1]; // Fallback
-    } else {
-        // Fallback for completely unknown algorithm/strategy combinations
-        console.error("Unknown algorithm/strategy combination for action selection:", selectedAlgorithm, explorationStrategy);
-        const bestActions = getBestActions(state); // Uses appropriate table based on algorithm
-        return bestActions[Math.floor(Math.random() * bestActions.length)];
     }
 }
 
 // --- Get Action Probabilities ---
 export function getActionProbabilities(state, takeActionFuncForEnvLookup = null, currentAgentPosForLookup = null) { // Add optional args for SR Q calc
     ensureStateInitialized(state);
+    const numActions = actions.length;
+    if (numActions === 0) return {};
 
-    let probabilities;
+    let probabilities = {};
 
     if (selectedAlgorithm === 'actor-critic') {
         // Actor-Critic policy probabilities from hTable preferences
@@ -327,9 +322,7 @@ export function getActionProbabilities(state, takeActionFuncForEnvLookup = null,
         const getQ = (action) => calculateQValueSR(state, action, mTable, wTable, currentGridSizeForIteration, discountFactor, takeActionFuncForEnvLookup, currentAgentPosForLookup);
 
         if (explorationStrategy === 'epsilon-greedy') {
-            probabilities = {};
             const bestActions = getBestActions(state, takeActionFuncForEnvLookup, currentAgentPosForLookup);
-            const numActions = actions.length;
             const numBestActions = bestActions.length;
             const greedyProb = (1.0 - explorationRate);
             const exploreProb = explorationRate / numActions;
@@ -344,20 +337,26 @@ export function getActionProbabilities(state, takeActionFuncForEnvLookup = null,
         } else if (explorationStrategy === 'softmax') {
             const qValues = actions.map(action => getQ(action));
             probabilities = calculateSoftmaxProbabilities(qValues, softmaxBeta);
+        } else if (explorationStrategy === 'random') { // NEW: Random Strategy for SR
+            const uniformProb = 1.0 / numActions;
+            actions.forEach(action => probabilities[action] = uniformProb);
+        } else if (explorationStrategy === 'greedy') { // NEW: Greedy Strategy for SR
+            const bestActions = getBestActions(state, takeActionFuncForEnvLookup, currentAgentPosForLookup);
+            const numBestActions = bestActions.length;
+            const bestActionProb = 1.0 / numBestActions;
+            actions.forEach(action => {
+                probabilities[action] = bestActions.includes(action) ? bestActionProb : 0;
+            });
         } else {
             // Fallback SR probabilities
              console.error("Unknown exploration strategy for SR probabilities:", explorationStrategy);
-             probabilities = {};
-             const uniformProb = 1.0 / actions.length;
+             const uniformProb = 1.0 / numActions;
              actions.forEach(action => probabilities[action] = uniformProb);
         }
 
-    } else if (selectedAlgorithm === 'monte-carlo' || explorationStrategy === 'epsilon-greedy') {
-         // MODIFIED: Calculate probabilities based on the behavior policy for MC/TD Epsilon-Greedy
+    } else { // Handles Q-Learning, SARSA, Expected SARSA, Monte Carlo
          if (explorationStrategy === 'epsilon-greedy') {
-            probabilities = {};
             const bestActions = getBestActions(state);
-            const numActions = actions.length;
             const numBestActions = bestActions.length;
             const greedyProb = (1.0 - explorationRate);
             const exploreProb = explorationRate / numActions;
@@ -370,28 +369,33 @@ export function getActionProbabilities(state, takeActionFuncForEnvLookup = null,
                 }
             });
          } else if (explorationStrategy === 'softmax') {
-             // Calculate probabilities based on the behavior policy for MC/TD Softmax
-            const qValues = actions.map(action => qTable[state][action]); // MC uses qTable for behavior policy
+            const qValues = actions.map(action => qTable[state][action]);
             probabilities = calculateSoftmaxProbabilities(qValues, softmaxBeta);
+         } else if (explorationStrategy === 'random') { // NEW: Random Strategy for TD/MC
+            const uniformProb = 1.0 / numActions;
+            actions.forEach(action => probabilities[action] = uniformProb);
+         } else if (explorationStrategy === 'greedy') { // NEW: Greedy Strategy for TD/MC
+            const bestActions = getBestActions(state);
+            const numBestActions = bestActions.length;
+            const bestActionProb = 1.0 / numBestActions;
+            actions.forEach(action => {
+                probabilities[action] = bestActions.includes(action) ? bestActionProb : 0;
+            });
          } else {
              // Fallback for unknown strategy with MC/TD
              console.error("Unknown exploration strategy for MC/TD probabilities:", explorationStrategy);
-             probabilities = {};
-             const uniformProb = 1.0 / actions.length;
+             const uniformProb = 1.0 / numActions;
              actions.forEach(action => probabilities[action] = uniformProb);
          }
+    }
 
-    } else if (explorationStrategy === 'softmax') { // Specific TD+Softmax case (potentially redundant)
-        // Softmax exploration probabilities from qTable
-        const qValues = actions.map(action => qTable[state][action]);
-        probabilities = calculateSoftmaxProbabilities(qValues, softmaxBeta);
-
-    } else {
-        // Fallback for unknown algorithm/strategy combinations
-        console.error("Unknown exploration strategy/algorithm combo for probabilities:", selectedAlgorithm, explorationStrategy);
-        probabilities = {};
-        const uniformProb = 1.0 / actions.length;
-        actions.forEach(action => probabilities[action] = uniformProb);
+    // Final check for probability sum (can help catch issues)
+    let sumProbs = Object.values(probabilities).reduce((sum, p) => sum + p, 0);
+    if (Math.abs(sumProbs - 1.0) > 1e-6 && numActions > 0) {
+        console.warn(`Probabilities do not sum to 1 for state ${state}, strategy ${explorationStrategy}. Sum: ${sumProbs}. Normalizing.`);
+        // Simple normalization as a fallback
+        const factor = 1.0 / sumProbs;
+        actions.forEach(action => { probabilities[action] *= factor; });
     }
 
     return probabilities;

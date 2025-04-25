@@ -58,6 +58,8 @@
                                 <select id="explorationStrategySelect" title="Method used by the agent to decide between exploring new actions and exploiting known good actions (Used for Q-Learning, SARSA, Expected SARSA, Monte Carlo, SR).">
                                     <option value="epsilon-greedy" selected>ε-Greedy</option>
                                     <option value="softmax">Softmax</option>
+                                    <option value="random">Random</option>
+                                    <option value="greedy">Greedy</option>
                                 </select>
                             </div>
                             <div class="field field--slider">
@@ -134,6 +136,7 @@
 
         <!-- Row 1, Col 2: Simulation -->
         <div class="card sim-card">
+            <h4>Interactive Simulation</h4>
             <canvas id="gridCanvas" width="400" height="400"></canvas>
             <div class="canvas-helper-text">
                 <span>Tip: Click to cycle state content (💎/☠️/🚧/empty).<br>Shift+Click to set start state (🏠).</span>
