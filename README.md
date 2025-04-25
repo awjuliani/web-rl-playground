@@ -21,8 +21,8 @@ An interactive web-based demonstration of fundamental tabular Reinforcement Lear
     *   **Actor-Critic (Advantage Actor-Critic):** (On-Policy, combining policy and value-based learning)
     *   **Successor Representation (SR):** (Learning a predictive state representation, decoupling states and rewards)
 *   **Exploration Strategies:** Illustrating the **Exploration vs. Exploitation** trade-off.
-    *   **ε-Greedy**
-    *   **Softmax (Boltzmann)** (Actor-Critic also explores inherently via its stochastic policy)
+    *   **ε-Greedy** (Used for Q-Learning, SARSA, Expected SARSA, Successor Representation)
+    *   **Softmax (Boltzmann)** (Used for Q-Learning, SARSA, Expected SARSA, Actor-Critic, Successor Representation)
 *   **Configurable Parameters:** Allowing experimentation with key RL hyperparameters.
     *   **Learning Rate (α):** Controls update step size, affecting convergence speed and stability.
     *   **Discount Factor (γ):** Determines the importance of future rewards (**Discounting**).

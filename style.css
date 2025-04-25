@@ -296,10 +296,6 @@ h1 {
         align-self: start;
     }
      .sim-card { min-height: 300px; }
-     .algo-settings-card .settings, .env-settings-card .settings {
-         /* flex-grow: 1; */ /* REMOVED */
-         /* Style removed as it's no longer needed here */
-      }
      .algo-settings-card #resetAgentButton, .env-settings-card #resetEnvironmentButton {
          margin-top: auto; /* Ensure auto margin is kept */
          /* margin-bottom: 0; */ /* REMOVED - No longer needed */
