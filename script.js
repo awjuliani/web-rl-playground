@@ -10,7 +10,11 @@ import {
     initializeGridRewards, // Import the initialization function
     drawPolicyArrows, // Import policy drawing function
     interpolateProbColor, // Import the color interpolation function
-    drawSRVector // NEW: Import SR vector drawing function
+    drawSRVector, // NEW: Import SR vector drawing function
+    setGemRewardMagnitude, // NEW: Import gem reward setter
+    setBadStateRewardMagnitude, // NEW: Import bad state reward setter
+    rewardMagnitudeGem as initialGemReward, // NEW: Import initial gem reward
+    rewardMagnitudeBad as initialBadReward // NEW: Import initial bad reward
 } from './environment.js';
 
 import {
@@ -32,7 +36,11 @@ import {
     updateSelectedAlgorithm, applyMonteCarloUpdates,
     getActionProbabilities, // Import the new function
     getBestActions,
-    calculateQValueSR // Import SR Q calculation helper
+    calculateQValueSR, // Import SR Q calculation helper
+    // RENAMED: Import specific learning rates (srW instead of srR)
+    actorLearningRate, criticLearningRate, srMWeightLearningRate, srWWeightLearningRate,
+    // RENAMED: Import specific LR update functions (updateSRW instead of updateSRR)
+    updateActorLearningRate, updateCriticLearningRate, updateSRMLearningRate, updateSRWLearningRate,
 } from './algorithms.js';
 
 // --- State Variables ---
@@ -79,6 +87,7 @@ const resetAgentButton = document.getElementById('resetAgentButton');
 const resetEnvironmentButton = document.getElementById('resetEnvironmentButton');
 const lrSlider = document.getElementById('lrSlider');
 const lrValueSpan = document.getElementById('lrValue');
+const lrControl = lrSlider.parentElement.parentElement; // Get the whole field container for the main LR slider
 const discountSlider = document.getElementById('discountSlider');
 const discountValueSpan = document.getElementById('discountValue');
 const epsilonSlider = document.getElementById('epsilonSlider');
@@ -94,8 +103,8 @@ const terminateOnRewardCheckbox = document.getElementById('terminateOnRewardChec
 const speedSlider = document.getElementById('speedSlider');
 const speedValueSpan = document.getElementById('speedValue');
 const qValueDisplayDiv = document.getElementById('qValueDisplay');
+const qValueDisplayHeader = document.querySelector('#qValueDisplay .collapsible-header');
 const qGridDiv = document.querySelector('#qValueDisplay .q-grid');
-const qHeader = document.querySelector('#qValueDisplay .collapsible-header');
 const qStateSpan = document.getElementById('qState');
 const qUpSpan = document.getElementById('qUp');
 const qDownSpan = document.getElementById('qDown');
@@ -117,6 +126,16 @@ const rewardChartCanvas = document.getElementById('rewardChartCanvas');
 const srVectorAgentDisplayOption = document.getElementById('srVectorAgentDisplayOption'); // Renamed from srVectorDisplayOption
 const srVectorHoverDisplayOption = document.getElementById('srVectorHoverDisplayOption'); // NEW: Get the hover option
 const themeToggleCheckbox = document.getElementById('theme-checkbox'); // NEW: Theme toggle
+const gemRewardSlider = document.getElementById('gemRewardSlider'); // NEW
+const gemRewardValueSpan = document.getElementById('gemRewardValue'); // NEW
+const badStateRewardSlider = document.getElementById('badStateRewardSlider'); // NEW
+const badStateRewardValueSpan = document.getElementById('badStateRewardValue'); // NEW
+const srMLRControl = document.getElementById('srMLRControl');
+const srMLrSlider = document.getElementById('srMLrSlider');
+const srMLrValueSpan = document.getElementById('srMLrValue');
+const srWLRControl = document.getElementById('srWLRControl');
+const srWLrSlider = document.getElementById('srWLrSlider');
+const srWLrValueSpan = document.getElementById('srWLrValue');
 
 // --- NEW: Collapsible Settings Handler ---
 function initializeCollapsibles() {
@@ -178,8 +197,8 @@ function updateExplanationText() {
     // Check if explanations are loaded
     if (!explanations) {
         console.warn("Explanations not loaded yet.");
-        explanationTitle.textContent = 'Loading Explanations...';
-        algorithmExplanationDiv.innerHTML = '';
+        // explanationTitle.textContent = 'Loading Explanations...'; // Removed: Title is now static HTML
+        algorithmExplanationDiv.innerHTML = '<p>Loading explanation content...</p>'; // Keep fallback content
         explorationExplanationDiv.innerHTML = '';
         return;
     }
@@ -191,11 +210,12 @@ function updateExplanationText() {
     const strategyInfo = explanations.strategies[strategyKey];
 
     if (algoInfo) {
-        explanationTitle.textContent = `${algoInfo.title} Explanation`;
-        algorithmExplanationDiv.innerHTML = algoInfo.text;
+        // explanationTitle.textContent = `${algoInfo.title} Explanation`; // Removed: Title is now static HTML
+        // Prepend the algorithm title before the explanation text
+        algorithmExplanationDiv.innerHTML = `<h4>${algoInfo.title}</h4>${algoInfo.text}`;
     } else {
-        explanationTitle.textContent = 'Algorithm Explanation';
-        algorithmExplanationDiv.innerHTML = '<p>Select an algorithm to see details.</p>';
+        // explanationTitle.textContent = 'Algorithm Explanation'; // Removed: Title is now static HTML
+        algorithmExplanationDiv.innerHTML = '<h4>Algorithm Details</h4><p>Select an algorithm to see details.</p>';
     }
 
     if (algoKey === 'actor-critic') {
@@ -259,25 +279,30 @@ function drawEverything() {
     }
 
     // 6. Update Info Displays (does not affect canvas)
-    if (selectedAlgorithm === 'actor-critic') {
-        if (qGridDiv) qGridDiv.style.display = 'none';
-        if (qHeader) qHeader.style.display = 'none';
-    } else {
-        updateQValueDisplay();
-        if (qGridDiv) qGridDiv.style.display = '';
-        if (qHeader) qHeader.style.display = '';
-    }
+    updateQValueOrPreferenceDisplay();
     updateActionProbabilityDisplay();
     qValueDisplayDiv.style.display = '';
 }
 
-// --- Update Q-Value Display (and Action Probabilities) ---
-function updateQValueDisplay() {
+// --- Update Q-Value / Preference Display ---
+function updateQValueOrPreferenceDisplay() {
     const currentState = `${agentPos.x},${agentPos.y}`;
 
-    const setQValue = (spanElement, value) => {
+    // Update header text based on algorithm
+    if (qValueDisplayHeader) {
+        if (selectedAlgorithm === 'actor-critic') {
+            qValueDisplayHeader.textContent = 'Action Preferences h(s,a)';
+        } else if (selectedAlgorithm === 'sr') {
+             qValueDisplayHeader.textContent = 'Estimated Q(s,a) [from SR]';
+        } else {
+            qValueDisplayHeader.textContent = 'Action Values Q(s,a)';
+        }
+    }
+
+    const setDisplayValue = (spanElement, value) => {
         const numericValue = value !== undefined ? value : 0;
         spanElement.textContent = numericValue.toFixed(2);
+        // Use the same coloring logic for Q and H values for now
         if (numericValue > 0) {
             spanElement.style.color = 'var(--color-q-value-pos)';
         } else if (numericValue < 0) {
@@ -287,17 +312,26 @@ function updateQValueDisplay() {
         }
     };
 
-    if (selectedAlgorithm === 'sr') {
-        setQValue(qUpSpan, calculateQValueSR(currentState, 'up', mTable, wTable, gridSize, discountFactor, takeAction, agentPos));
-        setQValue(qDownSpan, calculateQValueSR(currentState, 'down', mTable, wTable, gridSize, discountFactor, takeAction, agentPos));
-        setQValue(qLeftSpan, calculateQValueSR(currentState, 'left', mTable, wTable, gridSize, discountFactor, takeAction, agentPos));
-        setQValue(qRightSpan, calculateQValueSR(currentState, 'right', mTable, wTable, gridSize, discountFactor, takeAction, agentPos));
-    } else if (selectedAlgorithm !== 'actor-critic') {
+    if (selectedAlgorithm === 'actor-critic') {
+        // Display H-values (preferences)
+        const statePreferences = hTable[currentState] || {};
+        setDisplayValue(qUpSpan, statePreferences['up']);
+        setDisplayValue(qDownSpan, statePreferences['down']);
+        setDisplayValue(qLeftSpan, statePreferences['left']);
+        setDisplayValue(qRightSpan, statePreferences['right']);
+    } else if (selectedAlgorithm === 'sr') {
+        // Display SR-based Q-values
+        setDisplayValue(qUpSpan, calculateQValueSR(currentState, 'up', mTable, wTable, gridSize, discountFactor, takeAction, agentPos));
+        setDisplayValue(qDownSpan, calculateQValueSR(currentState, 'down', mTable, wTable, gridSize, discountFactor, takeAction, agentPos));
+        setDisplayValue(qLeftSpan, calculateQValueSR(currentState, 'left', mTable, wTable, gridSize, discountFactor, takeAction, agentPos));
+        setDisplayValue(qRightSpan, calculateQValueSR(currentState, 'right', mTable, wTable, gridSize, discountFactor, takeAction, agentPos));
+    } else {
+        // Display standard Q-values
         const stateQValues = qTable[currentState] || {};
-        setQValue(qUpSpan, stateQValues['up']);
-        setQValue(qDownSpan, stateQValues['down']);
-        setQValue(qLeftSpan, stateQValues['left']);
-        setQValue(qRightSpan, stateQValues['right']);
+        setDisplayValue(qUpSpan, stateQValues['up']);
+        setDisplayValue(qDownSpan, stateQValues['down']);
+        setDisplayValue(qLeftSpan, stateQValues['left']);
+        setDisplayValue(qRightSpan, stateQValues['right']);
     }
 }
 
@@ -609,7 +643,9 @@ function learningLoopStep() {
             // --- End Episode End Logic ---
 
         } else {
-             updateQValueDisplay();
+             // Update displays after each step if episode not ended
+             updateQValueOrPreferenceDisplay();
+             updateActionProbabilityDisplay();
         }
     };
 
@@ -673,6 +709,8 @@ function stopLearning() {
         gridSizeValueSpan.textContent = gridSizeSlider.value;
         stepPenaltyValueSpan.textContent = parseFloat(stepPenaltySlider.value).toFixed(1);
         maxStepsValueSpan.textContent = maxStepsSlider.value;
+        gemRewardValueSpan.textContent = gemRewardSlider.value;
+        badStateRewardValueSpan.textContent = badStateRewardSlider.value;
 
         lrSlider.value = learningRate;
         discountSlider.value = discountFactor;
@@ -683,6 +721,8 @@ function stopLearning() {
         algorithmSelect.value = selectedAlgorithm;
         speedSlider.value = 1010 - simulationSpeed;
         cellDisplayMode = cellDisplayModeSelect.value;
+        gemRewardSlider.value = parseFloat(gemRewardValueSpan.textContent);
+        badStateRewardSlider.value = parseFloat(badStateRewardValueSpan.textContent);
 
         updateSpeed();
     }
@@ -820,7 +860,19 @@ lrSlider.addEventListener('input', () => {
     const value = parseFloat(lrSlider.value);
     updateLearningRate(value);
     lrValueSpan.textContent = value.toFixed(2);
+
+    // ALSO update the specific sliders and their display values to match the main LR
+    // This provides a consistent baseline when the main slider is moved.
+    actorLrSlider.value = value;
+    actorLrValueSpan.textContent = value.toFixed(2);
+    criticLrSlider.value = value;
+    criticLrValueSpan.textContent = value.toFixed(2);
+    srMLrSlider.value = value;
+    srMLrValueSpan.textContent = value.toFixed(2);
+    srWLrSlider.value = value;
+    srWLrValueSpan.textContent = value.toFixed(2);
 });
+
 discountSlider.addEventListener('input', () => {
     const value = parseFloat(discountSlider.value);
     updateDiscountFactor(value);
@@ -860,42 +912,86 @@ algorithmSelect.addEventListener('change', () => {
     updateSelectedAlgorithm(newAlgo);
     updateExplanationText();
 
+    // --- UI Element Visibility ---
     const strategyField = explorationStrategySelect.parentElement;
     const epsilonField = epsilonSlider.parentElement.parentElement;
 
+    // Hide all specific LR controls by default
+    actorCriticLRControl.style.display = 'none';
+    criticLRControl.style.display = 'none';
+    srMLRControl.style.display = 'none';
+    srWLRControl.style.display = 'none';
+    // Hide exploration strategy/epsilon/softmax controls initially, show as needed
+    if (strategyField) strategyField.style.display = 'none';
+    if (epsilonField) epsilonField.style.display = 'none';
+    softmaxBetaControl.style.display = 'none';
+    // Hide main LR slider by default, show as needed
+    if (lrControl) lrControl.style.display = 'none';
+
+
     // --- SR Display Option Visibility ---
     if (newAlgo === 'sr') {
-        srVectorAgentDisplayOption.style.display = ''; // Show Agent SR option
-        srVectorHoverDisplayOption.style.display = ''; // Show Hover SR option
+        srVectorAgentDisplayOption.style.display = '';
+        srVectorHoverDisplayOption.style.display = '';
+        // Show SR specific LR controls
+        srMLRControl.style.display = '';
+        srWLRControl.style.display = '';
+        // Hide main LR control for SR
+        if (lrControl) lrControl.style.display = 'none';
     } else {
-        srVectorAgentDisplayOption.style.display = 'none'; // Hide Agent SR option
-        srVectorHoverDisplayOption.style.display = 'none'; // Hide Hover SR option
-        // If either SR vector mode was selected, switch back to default display mode
-        if (cellDisplayModeSelect.value === 'sr-vector' || cellDisplayModeSelect.value === 'sr-vector-hover') {
-            cellDisplayModeSelect.value = 'values-color'; // Switch back to default
-            cellDisplayMode = 'values-color'; // Update internal state
-            drawEverything(); // Redraw with the new display mode
-        }
+        srVectorAgentDisplayOption.style.display = 'none';
+        srVectorHoverDisplayOption.style.display = 'none';
+         if (cellDisplayModeSelect.value === 'sr-vector' || cellDisplayModeSelect.value === 'sr-vector-hover') {
+             cellDisplayModeSelect.value = 'values-color';
+             cellDisplayMode = 'values-color';
+         }
     }
     // --- End SR Display Option Visibility ---
 
+    // --- Exploration & Specific/Main LR Control Visibility ---
     if (newAlgo === 'actor-critic') {
+        // AC uses softmax implicitly, show Beta control
+        softmaxBetaControl.style.display = '';
+        // Show Actor-Critic specific LR controls
+        actorCriticLRControl.style.display = '';
+        criticLRControl.style.display = '';
+        // Hide main LR control for AC
+        if (lrControl) lrControl.style.display = 'none';
+        // Hide general exploration strategy/epsilon
         if (strategyField) strategyField.style.display = 'none';
         if (epsilonField) epsilonField.style.display = 'none';
-        softmaxBetaControl.style.display = '';
-    } else {
+    } else if (newAlgo === 'sr') {
+        // SR uses standard exploration, show strategy dropdown
+        if (strategyField) strategyField.style.display = '';
+         const currentStrategy = explorationStrategySelect.value;
+         if (currentStrategy === 'epsilon-greedy') {
+            if (epsilonField) epsilonField.style.display = '';
+            softmaxBetaControl.style.display = 'none';
+         } else { // Softmax
+            if (epsilonField) epsilonField.style.display = 'none';
+            softmaxBetaControl.style.display = '';
+         }
+         // SR specific LR controls (srWLRControl) are already shown above
+         // Main LR control is already hidden above
+    } else { // Handles QL, SARSA, ES, MC (non-AC, non-SR algos)
+         // Show standard exploration strategy controls
          if (strategyField) strategyField.style.display = '';
          const currentStrategy = explorationStrategySelect.value;
          if (currentStrategy === 'epsilon-greedy') {
             if (epsilonField) epsilonField.style.display = '';
             softmaxBetaControl.style.display = 'none';
-         } else {
+         } else { // Softmax
             if (epsilonField) epsilonField.style.display = 'none';
             softmaxBetaControl.style.display = '';
          }
+         // Show main LR control for these algorithms
+         if (lrControl) lrControl.style.display = '';
+         // Ensure AC/SR specific LR controls remain hidden (done by default at start)
     }
+    // --- End Exploration Control Visibility ---
 
     resetAgentLogic();
+
     console.log("Algorithm changed to:", newAlgo, "- Agent reset.");
 });
 explorationStrategySelect.addEventListener('change', () => {
@@ -1086,6 +1182,25 @@ themeToggleCheckbox.addEventListener('change', () => {
     setTheme(themeToggleCheckbox.checked ? 'light' : 'dark');
 });
 
+// --- NEW: Reward Magnitude Slider Listeners ---
+gemRewardSlider.addEventListener('input', () => {
+    const value = parseFloat(gemRewardSlider.value);
+    setGemRewardMagnitude(value);
+    gemRewardValueSpan.textContent = value.toString();
+    // Optional: Redraw values immediately if desired, though learning loop handles it too
+    // if (!isLearning) drawEverything();
+});
+
+badStateRewardSlider.addEventListener('input', () => {
+    const value = parseFloat(badStateRewardSlider.value);
+    setBadStateRewardMagnitude(value);
+    badStateRewardValueSpan.textContent = value.toString();
+    // Optional: Redraw values immediately if desired
+    // if (!isLearning) drawEverything();
+});
+// --- End Reward Magnitude Slider Listeners ---
+
+
 // --- Initial Setup ---
 async function initializeApp() {
     // NEW: Set initial theme based on localStorage or system preference
@@ -1116,32 +1231,43 @@ async function initializeApp() {
     updateExplorationStrategy(initialExplorationStrategy);
     updateSelectedAlgorithm(initialAlgo);
     setStepPenalty(parseFloat(stepPenaltySlider.value));
+    setGemRewardMagnitude(initialGemReward);
+    setBadStateRewardMagnitude(initialBadReward);
     updateTerminateOnGemSetting();
     maxStepsPerEpisode = parseInt(maxStepsSlider.value, 10);
 
-    // Set initial visibility for exploration controls based on INITIAL algorithm and STRATEGY
+    // Set initial UI values for new sliders
+    gemRewardSlider.value = initialGemReward;
+    gemRewardValueSpan.textContent = initialGemReward;
+    badStateRewardSlider.value = initialBadReward;
+    badStateRewardValueSpan.textContent = initialBadReward;
+
+    // Set initial visibility for exploration AND specific LR controls based on INITIAL algorithm and STRATEGY
     const strategyField = explorationStrategySelect.parentElement;
     const epsilonField = epsilonSlider.parentElement.parentElement;
 
-    if (initialAlgo === 'actor-critic') {
-        if (strategyField) strategyField.style.display = 'none';
-        if (epsilonField) epsilonField.style.display = 'none';
-        softmaxBetaControl.style.display = '';
-    } else { // Handles QL, SARSA, ES, MC, SR
-        if (strategyField) strategyField.style.display = '';
-        if (initialExplorationStrategy === 'epsilon-greedy') {
-            if (epsilonField) epsilonField.style.display = '';
-            softmaxBetaControl.style.display = 'none';
-        } else { // Softmax
-            if (epsilonField) epsilonField.style.display = 'none';
-            softmaxBetaControl.style.display = '';
-        }
-    }
+    // Hide all specific LR controls by default
+    actorCriticLRControl.style.display = 'none';
+    criticLRControl.style.display = 'none';
+    srMLRControl.style.display = 'none';
+    srWLRControl.style.display = 'none';
+    // Hide exploration strategy/epsilon/softmax controls initially, show as needed
+    if (strategyField) strategyField.style.display = 'none';
+    if (epsilonField) epsilonField.style.display = 'none';
+    softmaxBetaControl.style.display = 'none';
+    // Hide main LR slider by default, show as needed
+    if (lrControl) lrControl.style.display = 'none';
 
-    // --- Set initial visibility for SR display options ---
+
+    // --- Set initial visibility for SR display options AND specific LR controls ---
     if (initialAlgo === 'sr') {
         srVectorAgentDisplayOption.style.display = '';
         srVectorHoverDisplayOption.style.display = '';
+        // Show SR specific LR controls
+        srMLRControl.style.display = '';
+        srWLRControl.style.display = '';
+        // Hide main LR control for SR
+        if (lrControl) lrControl.style.display = 'none';
     } else {
         srVectorAgentDisplayOption.style.display = 'none';
         srVectorHoverDisplayOption.style.display = 'none';
@@ -1152,6 +1278,47 @@ async function initializeApp() {
          }
     }
     // --- End SR Display Option Visibility ---
+
+
+    // --- Set initial visibility for Exploration AND AC/SR specific LR controls ---
+    if (initialAlgo === 'actor-critic') {
+         // AC uses softmax implicitly, show Beta control
+        softmaxBetaControl.style.display = '';
+        // Show Actor-Critic specific LR controls
+        actorCriticLRControl.style.display = '';
+        criticLRControl.style.display = '';
+        // Hide main LR control for AC
+        if (lrControl) lrControl.style.display = 'none';
+        // Hide general exploration strategy/epsilon
+        if (strategyField) strategyField.style.display = 'none';
+        if (epsilonField) epsilonField.style.display = 'none';
+    } else if (initialAlgo === 'sr') {
+        // SR uses standard exploration, show strategy dropdown
+        if (strategyField) strategyField.style.display = '';
+         if (initialExplorationStrategy === 'epsilon-greedy') {
+            if (epsilonField) epsilonField.style.display = '';
+            softmaxBetaControl.style.display = 'none';
+         } else { // Softmax
+            if (epsilonField) epsilonField.style.display = 'none';
+            softmaxBetaControl.style.display = '';
+         }
+         // SR specific LR controls (srWLRControl) are already shown above
+         // Main LR control is already hidden above
+    } else { // Handles QL, SARSA, ES, MC (non-AC, non-SR algos)
+         // Show standard exploration strategy controls
+         if (strategyField) strategyField.style.display = '';
+         if (initialExplorationStrategy === 'epsilon-greedy') {
+            if (epsilonField) epsilonField.style.display = '';
+            softmaxBetaControl.style.display = 'none';
+         } else { // Softmax
+            if (epsilonField) epsilonField.style.display = 'none';
+            softmaxBetaControl.style.display = '';
+         }
+         // Show main LR control for these algorithms
+         if (lrControl) lrControl.style.display = '';
+         // Ensure AC/SR specific LR controls remain hidden (done by default at start)
+    }
+    // --- End Initial Exploration/Specific LR Visibility ---
 
     initializeCollapsibles();
 

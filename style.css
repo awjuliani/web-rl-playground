@@ -373,8 +373,13 @@ h1 {
     user-select: none; /* Prevent text selection on click */
     position: relative; /* Needed for the arrow */
     padding-right: 20px; /* Space for the arrow */
-    margin-bottom: var(--space-2); /* Space between header and content */
+    margin-bottom: var(--space-2); /* Default space between header and content */
     transition: margin-bottom 0.3s ease; /* Smooth transition */
+}
+
+/* NEW: Reduce margin specifically for the explanation card header when expanded */
+.explanation-card > .collapsible-header {
+    margin-bottom: var(--space-1); /* Reduced bottom margin */
 }
 
 .collapsible-header::after {
@@ -396,6 +401,11 @@ h1 {
     margin-bottom: 0; /* Remove space below header when collapsed */
 }
 
+/* Ensure explanation card header also has 0 margin when collapsed */
+.explanation-card > .collapsible-header.collapsed {
+    margin-bottom: 0;
+}
+
 .collapsible-content {
     max-height: 1000px; /* Set a large max-height for expanded state */
     overflow: hidden;
@@ -403,6 +413,11 @@ h1 {
     padding-top: var(--space-2); /* Add padding when open */
     padding-bottom: var(--space-2); /* Add padding when open */
     border-top: 1px solid transparent; /* Prepare for border transition */
+}
+
+/* NEW: Specific padding for explanation card content */
+.explanation-card .collapsible-content {
+    padding-top: var(--space-1); /* Reduced top padding */
 }
 
 .collapsible-content.collapsed {
@@ -832,6 +847,19 @@ canvas {
 .explanation-card .katex-display { margin: var(--space-2) 0; }
 .explanation-card strong { color: var(--color-primary); }
 /* --- End Explanation Card Styles --- */
+
+/* NEW: Style for the inner titles (Algorithm and Exploration) in the explanation card */
+.explanation-card #algorithmExplanation h4,
+.explanation-card #explorationExplanation h4 {
+    margin: 0 0 var(--space-2) 0; /* Bottom margin only */
+    padding-bottom: var(--space-1); /* Add padding below for the line */
+    border-bottom: 1px solid var(--color-border); /* Add border */
+    color: var(--color-text); /* Regular text color */
+    font-size: 1.1em; /* Slightly larger than base text */
+    font-weight: 600; /* Bold */
+    text-align: left; /* Align left */
+    transition: border-color 0.3s ease, color 0.3s ease; /* Add transitions */
+}
 
 /* Adjust sim-card canvas */
 .sim-card canvas {

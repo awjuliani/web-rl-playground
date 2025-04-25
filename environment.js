@@ -9,9 +9,11 @@ export const REWARD_GEM = 1;
 export const REWARD_BAD = -1;
 export const REWARD_WALL = 2;
 
-// Reward magnitudes for terminal states
-export const REWARD_MAGNITUDE_GEM = 10;
-export const REWARD_MAGNITUDE_BAD = -10;
+// Reward magnitudes for terminal states (NOW VARIABLES)
+// export const REWARD_MAGNITUDE_GEM = 10; // OLD CONSTANT
+// export const REWARD_MAGNITUDE_BAD = -10; // OLD CONSTANT
+export let rewardMagnitudeGem = 10;
+export let rewardMagnitudeBad = -10;
 
 // --- SVGs ---
 const agentSvgString = `
@@ -93,6 +95,28 @@ export function setStepPenalty(value) {
         console.log("Step penalty updated to:", stepPenalty);
     } else {
         console.warn("Invalid step penalty value:", value);
+    }
+}
+
+// --- NEW: Setter for Gem Reward Magnitude ---
+export function setGemRewardMagnitude(value) {
+    const newReward = parseFloat(value);
+    if (!isNaN(newReward) && newReward >= 0) { // Ensure non-negative
+        rewardMagnitudeGem = newReward;
+        console.log("Gem reward magnitude updated to:", rewardMagnitudeGem);
+    } else {
+        console.warn("Invalid gem reward magnitude value:", value);
+    }
+}
+
+// --- NEW: Setter for Bad State Reward Magnitude ---
+export function setBadStateRewardMagnitude(value) {
+    const newReward = parseFloat(value);
+    if (!isNaN(newReward) && newReward <= 0) { // Ensure non-positive
+        rewardMagnitudeBad = newReward;
+        console.log("Bad state reward magnitude updated to:", rewardMagnitudeBad);
+    } else {
+        console.warn("Invalid bad state reward magnitude value:", value);
     }
 }
 
@@ -623,12 +647,14 @@ export function takeAction(action, currentAgentPos, gridSize) {
     // This logic only applies if the agent actually moved (nextX, nextY changed)
     // or if the agent started on a gem/bad state and tried to move off but couldn't (e.g., walled in).
     if (cellState === REWARD_GEM) {
-        reward = REWARD_MAGNITUDE_GEM; // Use constant
+        // reward = REWARD_MAGNITUDE_GEM; // Use constant // OLD
+        reward = rewardMagnitudeGem; // MODIFIED: Use variable
         if (terminateOnGem) {
             done = true; // Set done flag if setting is enabled
         }
     } else if (cellState === REWARD_BAD) {
-        reward = REWARD_MAGNITUDE_BAD; // Use constant
+        // reward = REWARD_MAGNITUDE_BAD; // Use constant // OLD
+        reward = rewardMagnitudeBad; // MODIFIED: Use variable
         done = true; // Episode always terminates on hitting the bad state
     }
     // If cellState is REWARD_EMPTY or REWARD_WALL (which agent can't enter, but might start on if forced?),

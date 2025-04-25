@@ -4,8 +4,10 @@ export let hTable = {}; // Preference table (Actor): state -> { action: preferen
 export let mTable = {}; // Successor Representation: state -> { nextState: discounted_occupancy }
 export let wTable = {}; // Reward Weights: state -> weight (expected immediate reward)
 export let learningRate = 0.1;
-// export let actorLearningRate = 0.1; // Example if using separate rates
-// export let criticLearningRate = 0.1; // Example if using separate rates
+export let actorLearningRate = 0.1; // NEW: Actor specific LR
+export let criticLearningRate = 0.1; // NEW: Critic specific LR
+export let srMWeightLearningRate = 0.1; // NEW: SR Matrix specific LR
+export let srWWeightLearningRate = 0.1; // RENAMED: SR Reward Weight specific LR (was R)
 export let discountFactor = 0.9;
 export let explorationRate = 0.2;
 export let softmaxBeta = 1.0; // Temperature parameter for softmax
@@ -419,10 +421,10 @@ export function learningStep(agentPos, gridSize, takeActionFunc, resetAgentFunc)
         // 1. Calculate TD Error (Advantage in this simple case)
         const tdError = reward + discountFactor * V_next - V_current;
 
-        // 2. Critic Update (Update V(s))
-        vTable[currentState] = V_current + learningRate * tdError; // Use criticLearningRate if separate
+        // 2. Critic Update (Update V(s)) using criticLearningRate
+        vTable[currentState] = V_current + criticLearningRate * tdError; // MODIFIED
 
-        // 3. Actor Update (Update preferences H(s,a))
+        // 3. Actor Update (Update preferences H(s,a)) using actorLearningRate
         // Get action probabilities based on current preferences
         const preferences = actions.map(act => hTable[currentState][act]);
         const actionProbs = calculateSoftmaxProbabilities(preferences, softmaxBeta);
@@ -430,25 +432,24 @@ export function learningStep(agentPos, gridSize, takeActionFunc, resetAgentFunc)
         for (const a of actions) {
             if (a === action) {
                 // Increase preference for the action taken proportionally to TD error and (1 - prob)
-                hTable[currentState][a] += learningRate * tdError * (1 - actionProbs[a]); // Use actorLearningRate if separate
+                hTable[currentState][a] += actorLearningRate * tdError * (1 - actionProbs[a]); // MODIFIED
             } else {
                  // Decrease preference for other actions proportionally to TD error and prob
-                 hTable[currentState][a] -= learningRate * tdError * actionProbs[a]; // Use actorLearningRate if separate
+                 hTable[currentState][a] -= actorLearningRate * tdError * actionProbs[a]; // MODIFIED
             }
         }
         // --- End Actor-Critic Update ---
 
     } else if (selectedAlgorithm === 'sr') {
         // --- Successor Representation Update ---
-        // 1. Update Reward Weights w(s') using the reward received upon entering s'
+        // 1. Update Reward Weights w(s') using srWWeightLearningRate
         const current_w_next = wTable[nextState] ?? 0;
         const target_w = reward; // Target for w(s') is the immediate reward received
         const error_w = target_w - current_w_next;
-        wTable[nextState] = current_w_next + learningRate * error_w;
+        wTable[nextState] = current_w_next + srWWeightLearningRate * error_w; // MODIFIED (Variable Renamed)
 
-        // 2. Update Successor Representation M(s, s_prime) for the *current state* s
-        //    and *all possible* successor states s_prime in the grid.
-        //    M(s, s_prime) <-- M(s, s_prime) + alpha * [ Indicator(nextState == s_prime) + gamma * M(nextState, s_prime) - M(s, s_prime) ]
+        // 2. Update Successor Representation M(s, s_prime) using srMWeightLearningRate
+        //    M(s, s_prime) <-- M(s, s_prime) + alpha_M * [ Indicator(nextState == s_prime) + gamma * M(nextState, s_prime) - M(s, s_prime) ]
         if (mTable[currentState]) { // Check if current state exists in M
             for (let x_prime = 0; x_prime < gridSize; x_prime++) {
                 for (let y_prime = 0; y_prime < gridSize; y_prime++) {
@@ -463,7 +464,7 @@ export function learningStep(agentPos, gridSize, takeActionFunc, resetAgentFunc)
                     const tdTarget_M = indicator + discountFactor * M_next_prime;
                     const tdError_M = tdTarget_M - M_s_prime;
 
-                    mTable[currentState][state_prime] = M_s_prime + learningRate * tdError_M;
+                    mTable[currentState][state_prime] = M_s_prime + srMWeightLearningRate * tdError_M; // (No change here)
                 }
             }
         } else {
@@ -479,13 +480,19 @@ export function learningStep(agentPos, gridSize, takeActionFunc, resetAgentFunc)
         // Calculate TD Target based on the specific TD algorithm
         if (selectedAlgorithm === 'q-learning') {
             const bestNextActions = getBestActions(nextState);
-            const maxNextQ = qTable[nextState][bestNextActions[0]];
+            // Ensure next state Q values are initialized before accessing
+            ensureStateInitialized(nextState); // Added safety check
+            const maxNextQ = qTable[nextState][bestNextActions[0]]; // Assumes getBestActions returns at least one
             tdTarget = reward + discountFactor * maxNextQ;
         } else if (selectedAlgorithm === 'sarsa') {
+            // Ensure next state Q values are initialized before choosing next action based on them
+            ensureStateInitialized(nextState); // Added safety check
             const nextAction = chooseAction(nextState); // chooseAction selects based on qTable/policy
             const nextQ = qTable[nextState][nextAction];
             tdTarget = reward + discountFactor * nextQ;
         } else if (selectedAlgorithm === 'expected-sarsa') {
+             // Ensure next state Q values are initialized before calculating expected value
+            ensureStateInitialized(nextState); // Added safety check
             const nextActionProbs = getActionProbabilities(nextState);
             let expectedNextQ = 0;
             for (const nextAction of actions) {
@@ -499,7 +506,7 @@ export function learningStep(agentPos, gridSize, takeActionFunc, resetAgentFunc)
             return { needsStop: true, newAgentPos: agentPos, done: false };
         }
 
-        const newQValue = oldQValue + learningRate * (tdTarget - oldQValue);
+        const newQValue = oldQValue + learningRate * (tdTarget - oldQValue); // Uses general learningRate
         qTable[currentState][action] = newQValue;
         // --- End TD Learning Updates ---
     }
@@ -532,9 +539,26 @@ export function applyMonteCarloUpdates() {
 // Update Parameters
 export function updateLearningRate(newLr) {
     learningRate = newLr;
-    // If using separate rates:
-    // actorLearningRate = newLr; // Or update based on separate sliders
-    // criticLearningRate = newLr;
+    // ALSO update the specific learning rates to this new baseline
+    // The specific sliders can then override these if the user adjusts them
+    actorLearningRate = newLr;
+    criticLearningRate = newLr;
+    srMWeightLearningRate = newLr;
+    srWWeightLearningRate = newLr; // MODIFIED (Variable Renamed)
+}
+
+// NEW: Update functions for specific learning rates
+export function updateActorLearningRate(newLr) {
+    actorLearningRate = newLr;
+}
+export function updateCriticLearningRate(newLr) {
+    criticLearningRate = newLr;
+}
+export function updateSRMLearningRate(newLr) {
+    srMWeightLearningRate = newLr;
+}
+export function updateSRWLearningRate(newLr) { // RENAMED (was updateSRRLearningRate)
+    srWWeightLearningRate = newLr; // MODIFIED (Variable Renamed)
 }
 
 export function updateDiscountFactor(newDf) {

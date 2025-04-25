@@ -67,6 +67,41 @@
                                     <span class="slider-value" id="lrValue">0.1</span>
                                 </div>
                             </div>
+
+                            <!-- NEW: Actor-Critic Learning Rate Controls -->
+                            <div id="actorCriticLRControl" class="field field--slider" style="display: none;">
+                                <label for="actorLrSlider" title="Actor Learning Rate (α_actor): Step size for updating action preferences (H-table). Specific to Actor-Critic.">Actor LR (α<sub>A</sub>):</label>
+                                <div class="slider-container">
+                                    <input type="range" id="actorLrSlider" min="0.01" max="1" step="0.01" value="0.1" title="Actor Learning Rate (α_actor): Step size for updating action preferences (H-table). Specific to Actor-Critic.">
+                                    <span class="slider-value" id="actorLrValue">0.1</span>
+                                </div>
+                            </div>
+                            <div id="criticLRControl" class="field field--slider" style="display: none;">
+                                <label for="criticLrSlider" title="Critic Learning Rate (α_critic): Step size for updating state values (V-table). Specific to Actor-Critic.">Critic LR (α<sub>C</sub>):</label>
+                                <div class="slider-container">
+                                    <input type="range" id="criticLrSlider" min="0.01" max="1" step="0.01" value="0.1" title="Critic Learning Rate (α_critic): Step size for updating state values (V-table). Specific to Actor-Critic.">
+                                    <span class="slider-value" id="criticLrValue">0.1</span>
+                                </div>
+                            </div>
+                            <!-- END NEW Actor-Critic Controls -->
+
+                            <!-- NEW: SR Learning Rate Controls -->
+                            <div id="srMLRControl" class="field field--slider" style="display: none;">
+                                <label for="srMLrSlider" title="SR Matrix Learning Rate (α_M): Step size for updating the successor representation matrix (M-table). Specific to SR.">SR Matrix LR (α<sub>M</sub>):</label>
+                                <div class="slider-container">
+                                    <input type="range" id="srMLrSlider" min="0.01" max="1" step="0.01" value="0.1" title="SR Matrix Learning Rate (α_M): Step size for updating the successor representation matrix (M-table). Specific to SR.">
+                                    <span class="slider-value" id="srMLrValue">0.1</span>
+                                </div>
+                            </div>
+                             <div id="srWLRControl" class="field field--slider" style="display: none;">
+                                <label for="srWLrSlider" title="SR Reward Weight Learning Rate (α_W): Step size for updating the reward weights (w-table). Specific to SR.">SR Weight LR (α<sub>W</sub>):</label>
+                                <div class="slider-container">
+                                    <input type="range" id="srWLrSlider" min="0.01" max="1" step="0.01" value="0.1" title="SR Reward Weight Learning Rate (α_W): Step size for updating the reward weights (w-table). Specific to SR.">
+                                    <span class="slider-value" id="srWLrValue">0.1</span>
+                                </div>
+                            </div>
+                            <!-- END NEW SR Controls -->
+
                             <div class="field field--slider">
                                 <label for="discountSlider" title="Determines the importance of future rewards. A value closer to 1 makes the agent focus more on long-term rewards.">Discount Factor (γ):</label>
                                 <div class="slider-container">
@@ -143,6 +178,20 @@
                                 </div>
                             </div>
                             <div class="field field--slider">
+                                <label for="gemRewardSlider" title="The reward received for landing on a gem (💎).">Gem Reward:</label>
+                                <div class="slider-container">
+                                    <input type="range" id="gemRewardSlider" name="gemReward" value="10" min="1" max="20" step="1" title="The reward received for landing on a gem (💎).">
+                                    <span class="slider-value" id="gemRewardValue">10</span>
+                                </div>
+                            </div>
+                            <div class="field field--slider">
+                                <label for="badStateRewardSlider" title="The reward (penalty) received for landing on a skull (☠️).">Skull Penalty:</label>
+                                <div class="slider-container">
+                                    <input type="range" id="badStateRewardSlider" name="badStateReward" value="-10" min="-20" max="-1" step="1" title="The reward (penalty) received for landing on a skull (☠️).">
+                                    <span class="slider-value" id="badStateRewardValue">-10</span>
+                                </div>
+                            </div>
+                            <div class="field field--slider">
                                 <label for="maxStepsSlider" title="Maximum number of steps allowed in an episode before it automatically resets.">Max Steps / Episode:</label>
                                 <div class="slider-container">
                                     <input type="range" id="maxStepsSlider" name="maxSteps" value="100" min="10" max="500" step="10" title="Maximum number of steps allowed in an episode before it automatically resets.">
@@ -206,7 +255,7 @@
 
     <!-- Explanation Section MOVED HERE (Outside main-container) -->
     <div class="card explanation-card">
-        <h4 id="explanationTitle" class="collapsible-header" data-toggle="collapse" data-target="#explanationContent">Algorithm Explanation</h4>
+        <h4 id="explanationTitle" class="collapsible-header" data-toggle="collapse" data-target="#explanationContent">About the Selected Algorithm</h4>
         <div id="explanationContent" class="collapsible-content">
             <div id="algorithmExplanation">
                 <p>Select an algorithm and exploration strategy to see details here.</p>
