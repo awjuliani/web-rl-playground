@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Beginner's RL Playground</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛝</text></svg>">
+    <link rel="stylesheet" href="style.css">
+    <!-- KaTeX Includes -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" integrity="sha384-5TcZemv2l/9On385z///+d7MSYlvIEw9FuZTIdZ14vJLqWphw7e7ZPuOiCHJcFCP" crossorigin="anonymous">
+
+    <!-- The loading of KaTeX is deferred to speed up page rendering -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js" integrity="sha384-cMkvdD8LoxVzGF/RPUKAcvmm49FQ0oxwDF3BGKtDXcEc+T1b2N+teh/OJfpU0jr6" crossorigin="anonymous"></script>
+
+    <!-- To automatically render math in text elements, include the auto-render extension: -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js" integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous"
+        onload="renderMathInElement(document.body);"></script>            <!-- End KaTeX Includes -->
+    <!-- NEW: Chart.js Dependency -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <a href="https://github.com/awjuliani/web-rl-playground" target="_blank" rel="noopener noreferrer" class="github-link" title="View Source on GitHub">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c2/GitHub_Invertocat_Logo.svg" alt="GitHub" class="github-mark dark-mode-only">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c2/GitHub_Invertocat_Logo.svg" alt="GitHub" class="github-mark light-mode-only">
+    </a>
+    <div class="theme-switch-wrapper" title="Toggle Dark/Light Theme">
+        <label class="theme-switch" for="theme-checkbox">
+            <input type="checkbox" id="theme-checkbox" />
+            <div class="slider round">
+                <span class="sun-icon">☀️</span>
+                <span class="moon-icon">🌙</span>
+            </div>
+      </label>
+      </div>
+    <h1>🛝 The Beginner's RL Playground 🛝</h1>
+    <div class="main-container">
+        <!-- Row 1, Col 1: Algo Settings -->
+        <div class="card algo-settings-card">
+            <div class="settings">
+                <!-- Algorithm Settings Section -->
+                <div class="settings-section">
+                    <h4 class="collapsible-header" data-toggle="collapse" data-target="#algorithmSettingsContent">Algorithm Settings</h4>
+                    <div id="algorithmSettingsContent" class="collapsible-content">
+                        <div class="settings-group">
+                            <div class="field">
+                                <label for="algorithmSelect" title="The reinforcement learning algorithm used to update Q-values and learn the optimal policy.">Algorithm:</label>
+                                <select id="algorithmSelect" title="The reinforcement learning algorithm used to update Q-values and learn the optimal policy.">
+                                    <option value="q-learning" selected>Q-Learning</option>
+                                    <option value="sarsa">SARSA</option>
+                                    <option value="expected-sarsa">Expected SARSA</option>
+                                    <option value="monte-carlo">Monte Carlo</option>
+                                    <option value="actor-critic">Actor-Critic</option>
+                                    <option value="sr">Successor Representation</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label for="explorationStrategySelect" title="Method used by the agent to decide between exploring new actions and exploiting known good actions (Used for Q-Learning, SARSA, Expected SARSA, Monte Carlo, SR).">Exploration Strategy:</label>
+                                <select id="explorationStrategySelect" title="Method used by the agent to decide between exploring new actions and exploiting known good actions (Used for Q-Learning, SARSA, Expected SARSA, Monte Carlo, SR).">
+                                    <option value="epsilon-greedy" selected>ε-Greedy</option>
+                                    <option value="softmax">Softmax</option>
+                                </select>
+                            </div>
+                            <div class="field field--slider">
+                                <label for="lrSlider" title="Determines how much new information overrides old information. Higher values mean faster learning but potential instability.">Learning Rate (α):</label>
+                                <div class="slider-container">
+                                    <input type="range" id="lrSlider" min="0.01" max="1" step="0.01" value="0.1" title="Determines how much new information overrides old information. Higher values mean faster learning but potential instability.">
+                                    <span class="slider-value" id="lrValue">0.1</span>
+                                </div>
+                            </div>
+                            <div class="field field--slider">
+                                <label for="discountSlider" title="Determines the importance of future rewards. A value closer to 1 makes the agent focus more on long-term rewards.">Discount Factor (γ):</label>
+                                <div class="slider-container">
+                                    <input type="range" id="discountSlider" min="0.1" max="1" step="0.01" value="0.9" title="Determines the importance of future rewards. A value closer to 1 makes the agent focus more on long-term rewards.">
+                                    <span class="slider-value" id="discountValue">0.9</span>
+                                </div>
+                            </div>
+                            <div class="field field--slider">
+                                <label for="epsilonSlider" title="Controls the trade-off between exploration (trying random actions) and exploitation (choosing the best known action). Higher values mean more exploration. (Used for ε-Greedy)">Exploration Rate (ε):</label>
+                                <div class="slider-container">
+                                    <input type="range" id="epsilonSlider" min="0" max="1" step="0.01" value="0.2" title="Controls the trade-off between exploration (trying random actions) and exploitation (choosing the best known action). Higher values mean more exploration. (Used for ε-Greedy)">
+                                     <span class="slider-value" id="epsilonValue">0.2</span>
+                                </div>
+                            </div>
+                            <div id="softmaxBetaControl" class="field field--slider" style="display: none;">
+                                <label for="softmaxBetaSlider" title="Controls the randomness of action selection. Higher values lead to more deterministic (greedy) choices. Used for Softmax exploration and Actor-Critic policy.">Softmax Temperature (β):</label>
+                                <div class="slider-container">
+                                    <input type="range" id="softmaxBetaSlider" min="0.1" max="10" step="0.1" value="1.0" title="Controls the randomness of action selection. Higher values lead to more deterministic (greedy) choices. Used for Softmax exploration and Actor-Critic policy.">
+                                     <span class="slider-value" id="softmaxBetaValue">1.0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Settings content ends -->
+            </div>
+            <!-- Reset Button moved HERE, directly under .card, after .settings -->
+            <button class="btn btn--secondary" id="resetAgentButton" title="Reset agent's learned Q-values and progress, keeping the environment layout.">Reset Algorithm</button>
+        </div>
+
+        <!-- Row 1, Col 2: Simulation -->
+        <div class="card sim-card">
+            <canvas id="gridCanvas" width="400" height="400"></canvas>
+            <div class="canvas-helper-text">
+                <span>Tip: Click to cycle state content (💎/☠️/🚧/empty).<br>Shift+Click to set start state (🏠).</span>
+            </div>
+            <div class="controls">
+                 <button class="btn btn--primary" id="startButton">Start Learning</button>
+                 <button class="btn btn--secondary" id="stopButton">Stop Learning</button>
+            </div>
+        </div>
+
+        <!-- Row 1, Col 3: Env Settings -->
+         <div class="card env-settings-card">
+            <div class="settings">
+                 <!-- Environment Settings Section -->
+                 <div class="settings-section">
+                      <h4 class="collapsible-header" data-toggle="collapse" data-target="#environmentSettingsContent">Environment Settings</h4>
+                      <div id="environmentSettingsContent" class="collapsible-content">
+                         <div class="settings-group">
+                            <div class="field field--slider">
+                                <label for="gridSizeSlider" title="Sets the width and height of the grid world (e.g., 5 means a 5x5 grid).">Grid Size:</label>
+                                <div class="slider-container">
+                                    <input type="range" id="gridSizeSlider" name="gridSize" value="5" min="2" max="10" step="1" title="Sets the width and height of the grid world (e.g., 5 means a 5x5 grid).">
+                                    <span class="slider-value" id="gridSizeValue">5</span>
+                                </div>
+                            </div>
+                            <div class="field">
+                                <label for="cellDisplayModeSelect" title="Choose what to display in each grid cell: Value color, Value text, greedy Policy arrows, SR vector (agent/hover), or None.">Cell Display:</label>
+                                <select id="cellDisplayModeSelect" title="Choose what to display in each grid cell: Value color, Value text, greedy Policy arrows, SR vector (agent/hover), or None.">
+                                    <option value="values-color" selected>Values (Color Only)</option>
+                                    <option value="values-text">Values (Color + Text)</option>
+                                    <option value="policy">Policy (π)</option>
+                                    <option value="sr-vector" id="srVectorAgentDisplayOption">SR Vector M(agent, :) (Color+Text)</option>
+                                    <option value="sr-vector-hover" id="srVectorHoverDisplayOption">SR Vector M(hover, :) (Color+Text)</option>
+                                    <option value="none">None</option>
+                                </select>
+                            </div>
+                            <div class="field field--slider">
+                                <label for="stepPenaltySlider" title="The negative reward received for each step taken that doesn't reach a goal or obstacle. Encourages shorter paths.">Step Penalty:</label>
+                                <div class="slider-container">
+                                    <input type="range" id="stepPenaltySlider" name="stepPenalty" value="-0.1" min="-2.0" max="0" step="0.1" title="The negative reward received for each step taken that doesn't reach a goal or obstacle. Encourages shorter paths.">
+                                    <span class="slider-value" id="stepPenaltyValue">-0.1</span>
+                                </div>
+                            </div>
+                            <div class="field field--slider">
+                                <label for="maxStepsSlider" title="Maximum number of steps allowed in an episode before it automatically resets.">Max Steps / Episode:</label>
+                                <div class="slider-container">
+                                    <input type="range" id="maxStepsSlider" name="maxSteps" value="100" min="10" max="500" step="10" title="Maximum number of steps allowed in an episode before it automatically resets.">
+                                    <span class="slider-value" id="maxStepsValue">100</span>
+                                </div>
+                            </div>
+                            <div class="field field--slider">
+                                <label for="speedSlider" title="Controls the speed of the simulation. Higher values mean faster simulation (shorter delay between steps).">Speed:</label>
+                                <div class="slider-container">
+                                    <input type="range" id="speedSlider" min="10" max="1000" step="10" value="750" title="Controls the speed of the simulation. Higher values mean faster simulation (shorter delay between steps).">
+                                     <span class="slider-value" id="speedValue">750</span> <!-- Displaying inverted value, JS will handle logic -->
+                                </div>
+                            </div>
+                            <div class="field field--row"> <!-- Use field--row for checkbox layout -->
+                                <input type="checkbox" id="terminateOnRewardCheckbox" checked title="If checked, the episode ends immediately when the agent reaches a reward state.">
+                                <label for="terminateOnRewardCheckbox" title="If checked, the episode ends immediately when the agent reaches a reward state.">Terminate on Reward</label> <!-- Label after checkbox -->
+                            </div>
+                         </div>
+                     </div>
+                 </div>
+                 <!-- Settings content ends -->
+             </div>
+             <!-- Reset Button moved HERE, directly under .card, after .settings -->
+             <button class="btn btn--secondary" id="resetEnvironmentButton" title="Reset environment layout (rewards, walls, start) to default, keeping agent's learned Q-values.">Reset Environment</button>
+         </div>
+
+        <!-- Row 2, Col 1: Q-Values / Action Probs -->
+        <div id="qValueDisplay" class="card q-card">
+             <h4 class="collapsible-header" data-toggle="collapse" data-target="#qValueContent">Action Values Q(s,a)</h4>
+             <div id="qValueContent" class="collapsible-content">
+                <div class="q-grid">
+                    <div class="q-cell q-up"><span class="q-arrow">↑</span> <span id="qUp">0.00</span></div>
+                    <div class="q-cell q-left"><span class="q-arrow">←</span> <span id="qLeft">0.00</span></div>
+                    <div class="q-cell q-placeholder"></div> <!-- Center placeholder -->
+                    <div class="q-cell q-right"><span class="q-arrow">→</span> <span id="qRight">0.00</span></div>
+                    <div class="q-cell q-down"><span class="q-arrow">↓</span> <span id="qDown">0.00</span></div>
+                </div>
+                <!-- Add Action Probability Display -->
+                <h4 class="prob-title">Action Probabilities π(a | s)</h4>
+                <div class="p-grid">
+                    <div class="p-cell p-up"><span class="p-arrow">↑</span> <span id="pUp">0.25</span></div>
+                    <div class="p-cell p-left"><span class="p-arrow">←</span> <span id="pLeft">0.25</span></div>
+                    <div class="p-cell p-placeholder"></div> <!-- Center placeholder -->
+                    <div class="p-cell p-right"><span class="p-arrow">→</span> <span id="pRight">0.25</span></div>
+                    <div class="p-cell p-down"><span class="p-arrow">↓</span> <span id="pDown">0.25</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 2, Cols 2-3: Progress Chart -->
+        <div class="card progress-card">
+            <h4 class="collapsible-header" data-toggle="collapse" data-target="#rewardChartContent">Learning Progress Plot</h4>
+            <div id="rewardChartContent" class="collapsible-content">
+                <div class="chart-container">
+                    <canvas id="rewardChartCanvas"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div> <!-- End main-container -->
+
+    <!-- Explanation Section MOVED HERE (Outside main-container) -->
+    <div class="card explanation-card">
+        <h4 id="explanationTitle" class="collapsible-header" data-toggle="collapse" data-target="#explanationContent">Algorithm Explanation</h4>
+        <div id="explanationContent" class="collapsible-content">
+            <div id="algorithmExplanation">
+                <p>Select an algorithm and exploration strategy to see details here.</p>
+            </div>
+            <div id="explorationExplanation">
+                <!-- Exploration strategy explanation will be appended here -->
+            </div>
+        </div>
+    </div>
+    <!-- End Explanation Section -->
+
+    <script type="module" src="script.js"></script>
+    <!-- Add KaTeX auto-render configuration -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+             // Ensure renderMathInElement is available before calling it
+             if (typeof renderMathInElement === 'function') {
+                try {
+                    renderMathInElement(document.body, {
+                        // customised options
+                        delimiters: [
+                            {left: '$$', right: '$$', display: true},
+                            {left: '$', right: '$', display: false},
+                            {left: '\\(', right: '\\)', display: false},
+                            {left: '\\[', right: '\\]', display: true}
+                        ],
+                        // • rendering keys, e.g.:
+                        throwOnError : false
+                    });
+                } catch (error) {
+                     console.error("Initial KaTeX rendering failed:", error);
+                }
+             } else {
+                 console.warn("renderMathInElement not found on DOMContentLoaded. KaTeX might not have loaded.");
+                 // Optionally, set a timeout or interval to retry rendering later
+             }
+        });
+    </script>
+    <footer class="copyright-footer">
+        <p>Vibe-coded with love by <a href="https://awjuliani.github.io">Arthur Juliani</a> (Copyright &copy; 2025)</p>
+    </footer>
+</body>
+</html> 

@@ -1,0 +1,990 @@
+/* Part 1: Foundations */
+:root {
+    /* Light Theme (Default) */
+    --color-bg: #f5f6f8;
+    --color-card: #ffffff;
+    --color-primary: #007bff;
+    --color-primary-dark: #0056b3;
+    --color-secondary: #6c757d; /* Adjusted grey */
+    --color-secondary-disabled: #adb5bd; /* Adjusted disabled grey */
+    --color-border: #dfe3e8;
+    --color-text: #343a40;
+    --color-text-light: #495057;
+    --color-text-heading: #343a40; /* For h1 */
+    --color-q-value-pos: var(--color-primary);
+    --color-q-value-neg: #dc3545; /* Red */
+    --color-q-value-zero: var(--color-text);
+    --color-grid: #ccc;
+    --color-hover-highlight: rgba(255, 255, 0, 0.3); /* Semi-transparent yellow */
+    --color-value-pos-bg: rgba(0, 123, 255, 0.5); /* Blue tint */
+    --color-value-neg-bg: rgba(220, 53, 69, 0.5); /* Red tint */
+    --color-value-zero-bg: rgba(255, 255, 255, 0.5); /* White tint */
+    --color-value-text: rgba(0, 0, 0, 0.5);
+    --color-value-text-shadow: rgba(255, 255, 255, 0.5);
+    --color-sr-value-bg-max: rgba(0, 0, 0, 0.6); /* Blackish for SR */
+    --color-sr-value-bg-min: rgba(255, 255, 255, 0.5); /* White for SR */
+    --color-sr-value-text: rgba(0, 0, 0, 0.7);
+    --color-sr-value-text-shadow: rgba(255, 255, 255, 0.5);
+    --color-prob-zero: #cccccc; /* Light Grey */
+    --color-prob-one: var(--color-text); /* Dark Grey/Black */
+    --color-button-secondary-bg: #e9ecef;
+    --color-button-secondary-text: var(--color-text-light);
+    --color-button-secondary-border: var(--color-border);
+    --color-button-secondary-hover-bg: #dde2e6;
+    --color-button-secondary-hover-border: #ced4da;
+    --color-slider-value-bg: #e9ecef;
+    --color-slider-value-border: var(--color-border);
+    --color-slider-thumb: var(--color-primary);
+    --color-slider-track: #ddd;
+    --color-reward-text: rgba(0, 0, 0, 1.0);
+    --color-reward-text-shadow: rgba(255, 255, 255, 1.0);
+    --color-canvas-bg: #ffffff;
+    --color-chart-smoothed-line: rgb(75, 192, 192);
+    --color-chart-smoothed-bg: rgba(75, 192, 192, 0.2);
+    --color-chart-raw-line: rgba(255, 99, 132, 0.5);
+    --color-chart-raw-bg: rgba(255, 99, 132, 0.1);
+    --color-chart-axis-label: var(--color-text-light);
+    --color-chart-grid-line: rgba(0, 0, 0, 0.1);
+    --color-chart-tooltip-bg: rgba(0, 0, 0, 0.8);
+    --color-chart-tooltip-text: #fff;
+    --color-footer-text: #666;
+
+    --radius: 6px;
+    --shadow: 0 2px 8px rgba(0,0,0,.08);
+
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 16px;
+    --space-4: 24px;
+
+    --font-base: 1rem; /* 16px */
+    --font-sm: 0.875rem; /* 14px */
+    --font-mono: 'Roboto Mono', monospace; /* For Q-values */
+}
+
+/* Dark Theme */
+body.dark-mode {
+    --color-bg: #121212; /* Very dark grey */
+    --color-card: #1e1e1e; /* Slightly lighter dark grey */
+    --color-primary: #4dabf7; /* Lighter blue */
+    --color-primary-dark: #1c7ed6; /* Darker light blue */
+    --color-secondary: #a0a7ad; /* Lighter grey */
+    --color-secondary-disabled: #555e64; /* Darker disabled grey */
+    --color-border: #333333; /* Dark border */
+    --color-text: #e0e0e0; /* Light grey text */
+    --color-text-light: #b0b7bf; /* Slightly lighter grey text */
+    --color-text-heading: #e0e0e0;
+    --color-q-value-pos: var(--color-primary);
+    --color-q-value-neg: #ff6b6b; /* Lighter red */
+    --color-q-value-zero: var(--color-text);
+    --color-grid: #444;
+    --color-hover-highlight: rgba(255, 255, 100, 0.3);
+    --color-value-pos-bg: rgba(77, 171, 247, 0.5); /* Lighter blue tint */
+    --color-value-neg-bg: rgba(255, 107, 107, 0.5); /* Lighter red tint */
+    --color-value-zero-bg: rgba(30, 30, 30, 0.5); /* Dark tint */
+    --color-value-text: rgba(224, 224, 224, 0.7);
+    --color-value-text-shadow: rgba(0, 0, 0, 0.5);
+    --color-sr-value-bg-max: rgba(224, 224, 224, 0.6); /* Lightish for SR */
+    --color-sr-value-bg-min: rgba(30, 30, 30, 0.5); /* Dark for SR */
+    --color-sr-value-text: rgba(224, 224, 224, 0.7);
+    --color-sr-value-text-shadow: rgba(0, 0, 0, 0.5);
+    --color-prob-zero: #555e64;
+    --color-prob-one: var(--color-text);
+    --color-button-secondary-bg: #3a3a3a;
+    --color-button-secondary-text: var(--color-text);
+    --color-button-secondary-border: #555;
+    --color-button-secondary-hover-bg: #4a4a4a;
+    --color-button-secondary-hover-border: #666;
+    --color-slider-value-bg: #3a3a3a;
+    --color-slider-value-border: #555;
+    --color-slider-thumb: var(--color-primary);
+    --color-slider-track: #444;
+    --color-reward-text: rgba(224, 224, 224, 1.0);
+    --color-reward-text-shadow: rgba(0, 0, 0, 1.0);
+    --color-canvas-bg: #2b2b2b; /* Dark background for canvas area if needed */
+    --color-chart-smoothed-line: rgb(75, 192, 192);
+    --color-chart-smoothed-bg: rgba(75, 192, 192, 0.3);
+    --color-chart-raw-line: rgba(255, 99, 132, 0.7);
+    --color-chart-raw-bg: rgba(255, 99, 132, 0.2);
+    --color-chart-axis-label: var(--color-text);
+    --color-chart-grid-line: rgba(255, 255, 255, 0.15);
+    --color-chart-tooltip-bg: rgba(255, 255, 255, 0.9);
+    --color-chart-tooltip-text: #000;
+    --color-footer-text: #aaa;
+
+    /* Update shadow for dark mode if needed */
+    --shadow: 0 2px 8px rgba(0,0,0,.3);
+}
+
+/* Basic Reset */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--space-4);
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    line-height: 1.5; /* Better default line height */
+    transition: background-color 0.3s ease, color 0.3s ease; /* Smooth theme transition */
+}
+
+h1 {
+    color: var(--color-text-heading); /* Use variable */
+    margin-bottom: var(--space-4);
+    transition: color 0.3s ease;
+}
+
+/* Part 2: Layout with CSS Grid */
+.main-container {
+    display: grid;
+    /* Define rows: Middle Row, Bottom Row */
+    grid-template-rows: auto 1fr; /* Top interactive row, Bottom row */
+    /* Define columns: Fixed for settings, flexible for sim */
+    grid-template-columns: 300px 1fr 300px; /* Algo | Sim | Env */
+    /* Define areas based on user request */
+    grid-template-areas:
+        "algosettings sim   envsettings" /* Row 1 */
+        "qvalues      chart chart";      /* Row 2 */
+    gap: var(--space-3);
+    width: 100%;
+    max-width: 1100px; /* Max width for 3 columns */
+    align-items: stretch; /* Align items to stretch vertically within their row */
+    margin-bottom: var(--space-3); /* Add space below main grid before explanation */
+}
+
+/* Assign grid areas to the cards */
+.algo-settings-card {
+    grid-area: algosettings;
+    width: auto;
+}
+
+.env-settings-card {
+    grid-area: envsettings;
+    width: auto;
+}
+
+.sim-card {
+    grid-area: sim;
+    grid-row: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 450px; /* Keep min height */
+     /* sim card should stretch */
+     align-self: stretch;
+}
+
+.q-card {
+    grid-area: qvalues;
+    width: auto;
+    align-self: start; /* Q-card likely doesn't need to stretch */
+}
+
+.progress-card {
+    grid-area: chart;
+    grid-column: chart / span 2;
+    width: 100%;
+    max-width: none;
+    margin-top: 0;
+    min-height: 540px; /* Reduced min height slightly */
+    display: flex;
+    flex-direction: column;
+    align-self: start; /* Chart likely doesn't need to stretch beyond min-height */
+}
+
+/* Chart container flex settings */
+.progress-card .collapsible-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+.progress-card .chart-container {
+    flex-grow: 1;
+}
+
+/* Settings card consistency */
+.algo-settings-card .settings,
+.env-settings-card .settings {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    background: none;
+    border: none;
+    border-radius: 0;
+    gap: var(--space-2); /* Re-add gap if needed between sections within settings */
+}
+.algo-settings-card .settings h4,
+.env-settings-card .settings h4 {
+    margin: 0;
+    margin-bottom: var(--space-1);
+    color: var(--color-text-light);
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space-1);
+    font-size: var(--font-base);
+}
+.algo-settings-card .settings-group,
+.env-settings-card .settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: 0;
+}
+.algo-settings-card #resetAgentButton,
+.env-settings-card #resetEnvironmentButton {
+    margin-top: auto; /* This will now push the button to the bottom of the CARD */
+    width: 100%;
+    max-width: none;
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
+}
+
+/* Responsive Layout */
+@media (max-width: 1024px) {
+    .main-container {
+        /* 2-column layout: Settings | Visuals */
+         grid-template-rows: auto auto 1fr; /* Rows: Algo/Sim, Env/Sim, QVal/Chart */
+         grid-template-columns: 300px 1fr;
+         grid-template-areas:
+            "algosettings sim"
+            "envsettings  sim"
+            "qvalues      chart";
+         max-width: 900px;
+         align-items: start; /* Reset alignment */
+    }
+     .sim-card {
+        grid-row: algosettings-start / envsettings-end;
+        align-self: stretch;
+        min-height: 0;
+     }
+     .progress-card { grid-column: auto; }
+     .algo-settings-card, .env-settings-card, .q-card, .progress-card { align-self: start; width: 100%; }
+     .algo-settings-card .settings, .env-settings-card .settings {
+         /* flex-grow: 1; */ /* REMOVED */
+         /* Style removed as it's no longer needed here */
+     }
+     .algo-settings-card #resetAgentButton, .env-settings-card #resetEnvironmentButton {
+          margin-top: auto; /* Ensure auto margin is kept */
+          /* margin-bottom: 0; */ /* REMOVED - No longer needed */
+      }
+}
+
+@media (max-width: 768px) {
+    .main-container {
+        /* Stack all 5 cards vertically */
+        grid-template-rows: repeat(5, auto); /* 5 cards now */
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "algosettings" /* Order: Algo */
+            "sim"          /* Sim */
+            "envsettings"  /* Env */
+            "qvalues"      /* QVal */
+            "chart";       /* Chart */
+        max-width: 600px;
+    }
+    /* Reset all spans, alignments, widths */
+    .algo-settings-card, .env-settings-card, .sim-card, .q-card, .progress-card {
+        width: 100%;
+        grid-row: auto;
+        grid-column: auto;
+        align-self: start;
+    }
+     .sim-card { min-height: 300px; }
+     .algo-settings-card .settings, .env-settings-card .settings {
+         /* flex-grow: 1; */ /* REMOVED */
+         /* Style removed as it's no longer needed here */
+      }
+     .algo-settings-card #resetAgentButton, .env-settings-card #resetEnvironmentButton {
+         margin-top: auto; /* Ensure auto margin is kept */
+         /* margin-bottom: 0; */ /* REMOVED - No longer needed */
+      }
+}
+
+@media (max-width: 480px) {
+    .main-container {
+        max-width: 100%;
+        padding-left: var(--space-2);
+        padding-right: var(--space-2);
+    }
+}
+
+
+/* Part 3: Card Containers */
+.card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    transition: background-color 0.3s ease, border-color 0.3s ease; /* Smooth theme transition */
+}
+
+/* Remove padding/bg from original containers */
+.ui-container {
+    padding: 0;
+    background: none;
+    box-shadow: none;
+    border: none;
+    width: auto; /* Let grid control width */
+    gap: 0; /* Gaps controlled by .card or internal elements */
+}
+
+.settings {
+    /* Styles specific to the settings content */
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2); /* Gap between headings and groups */
+    padding: 0; /* Padding is on the .card */
+    background: none; /* Background is on the .card */
+    border: none; /* Border is on the .card */
+    border-radius: 0;
+}
+
+.settings h4 {
+    margin: 0; /* Remove default margins */
+    margin-bottom: var(--space-1); /* Space below heading */
+    color: var(--color-text-light);
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space-1);
+    font-size: var(--font-base); /* Adjust font size */
+    transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+.settings h4:first-of-type {
+    margin-top: 0;
+}
+
+/* NEW: Collapsible Section Styles */
+.settings-section {
+    margin-bottom: var(--space-2); /* Add space between collapsible sections */
+}
+
+.collapsible-header {
+    cursor: pointer;
+    user-select: none; /* Prevent text selection on click */
+    position: relative; /* Needed for the arrow */
+    padding-right: 20px; /* Space for the arrow */
+    margin-bottom: var(--space-2); /* Space between header and content */
+    transition: margin-bottom 0.3s ease; /* Smooth transition */
+}
+
+.collapsible-header::after {
+    content: '▲'; /* Up arrow for expanded state */
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.8em;
+    transition: transform 0.3s ease, color 0.3s ease; /* Add color transition */
+    color: var(--color-secondary);
+}
+
+.collapsible-header.collapsed::after {
+    transform: translateY(-50%) rotate(180deg); /* Down arrow for collapsed */
+}
+
+.collapsible-header.collapsed {
+    margin-bottom: 0; /* Remove space below header when collapsed */
+}
+
+.collapsible-content {
+    max-height: 1000px; /* Set a large max-height for expanded state */
+    overflow: hidden;
+    transition: max-height 0.4s ease-out, padding-top 0.3s ease, padding-bottom 0.3s ease; /* Smooth transition */
+    padding-top: var(--space-2); /* Add padding when open */
+    padding-bottom: var(--space-2); /* Add padding when open */
+    border-top: 1px solid transparent; /* Prepare for border transition */
+}
+
+.collapsible-content.collapsed {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-top-color: var(--color-border); /* Show border only when collapsed */
+    overflow: hidden; /* Ensure content is clipped */
+    transition: max-height 0.4s ease-out, padding-top 0.3s ease, padding-bottom 0.3s ease, border-color 0.3s ease; /* Add border transition */
+}
+/* --- End NEW Collapsible Section Styles --- */
+
+/* Part 4: Settings Panel Polish */
+.settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2); /* Space between fields */
+    padding: 0; /* Padding now on .card */
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1); /* Space between label and input */
+}
+
+.field label {
+    font-weight: 600;
+    color: var(--color-text-light);
+    font-size: var(--font-sm); /* Smaller labels */
+    margin-bottom: var(--space-1); /* Add margin below label */
+    transition: color 0.3s ease;
+}
+
+.field--row {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-1);
+}
+
+.field--row label {
+    order: 1; /* Put label after checkbox */
+    font-weight: normal; /* Normal weight for checkbox label */
+}
+.field--row input[type="checkbox"] {
+     order: 0; /* Checkbox first */
+     width: auto; /* Override default input width */
+     margin-top: 0; /* Remove default margin */
+}
+
+input[type="range"] {
+    cursor: pointer;
+    width: 100%;
+    /* Basic track styling */
+    -webkit-appearance: none; /* Override default look */
+    appearance: none;
+    height: 8px; /* Track height */
+    background: var(--color-slider-track); /* Track color */
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+
+/* Thumb styling for WebKit browsers (Chrome, Safari, Edge) */
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; /* Override default look */
+    appearance: none;
+    width: 18px; /* Thumb width */
+    height: 18px; /* Thumb height */
+    background: var(--color-slider-thumb); /* Thumb color */
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+/* Thumb styling for Firefox */
+input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: var(--color-slider-thumb);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none; /* Remove default border */
+    transition: background-color 0.3s ease;
+}
+
+input[type="number"],
+select {
+    padding: var(--space-1) var(--space-2); /* Adjusted padding */
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    width: 100%;
+    font-size: var(--font-sm); /* Match label */
+    background-color: var(--color-card); /* Match card bg */
+    color: var(--color-text); /* Use text color */
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Style select dropdown arrow (basic example) */
+select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%236c757d" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); /* Default arrow color */
+    background-repeat: no-repeat;
+    background-position: right var(--space-2) center;
+    background-size: 1.2em;
+    padding-right: calc(var(--space-2) + 1.5em); /* Add padding for arrow */
+}
+/* Update arrow color for dark mode */
+body.dark-mode select {
+     background-image: url('data:image/svg+xml;utf8,<svg fill="%23a0a7ad" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); /* Use lighter grey */
+}
+
+
+/* Part 5: Simulation Canvas & Buttons */
+.sim-card {
+    align-items: center; /* Center canvas and controls horizontally */
+    gap: var(--space-2); /* REDUCED Gap between canvas, helper text, and controls */
+}
+
+canvas {
+    border: 2px solid var(--color-border); /* Thicker border */
+    background-color: var(--color-canvas-bg); /* Use canvas bg variable */
+    display: block;
+    border-radius: var(--radius);
+    max-width: 100%; /* Ensure canvas scales down if needed */
+    height: auto; /* Maintain aspect ratio */
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* NEW: Helper Text Styling */
+.canvas-helper-text {
+    font-size: var(--font-sm);
+    color: var(--color-text-light);
+    text-align: center;
+    width: 100%; /* Take full width */
+    padding: 0 var(--space-2); /* Add some horizontal padding */
+    margin-top: var(--space-1); /* Small space above */
+    margin-bottom: var(--space-2); /* Space below before controls */
+    transition: color 0.3s ease;
+}
+
+.canvas-helper-text span {
+    display: inline-block; /* Allows padding/margins if needed */
+    line-height: 1.3; /* Adjust line height for readability */
+}
+/* END NEW */
+
+.controls {
+    /* display: flex; */ /* Remove flex display */
+    /* flex-direction: row; */ /* Remove */
+    /* justify-content: center; */ /* Remove */
+    /* flex-wrap: wrap; */ /* Remove */
+    display: grid; /* Use grid layout */
+    grid-template-columns: 1fr 1fr; /* Two equal columns */
+    gap: var(--space-2); /* Adjust gap as needed */
+    width: 100%; /* Take full width of card */
+    margin-left: auto; /* Center the grid if max-width is set */
+    margin-right: auto; /* Center the grid if max-width is set */
+    margin-top: var(--space-2); /* Add some margin above controls */
+}
+
+/* Remove flex-specific styles from the buttons inside controls */
+.controls .btn {
+    /* flex-grow: 1; */ /* Remove */
+    /* flex-basis: 100px; */ /* Remove */
+    /* Keep existing padding/font-size/border etc. */
+    /* Ensure buttons take full column width if needed */
+     width: 100%;
+    /* Reset max-width or adjust as necessary */
+    max-width: none; /* Let the grid column define the width */
+}
+
+/* Keep general .btn styles */
+.btn {
+    padding: var(--space-2) var(--space-3);
+    cursor: pointer;
+    border: none;
+    border-radius: var(--radius);
+    font-size: var(--font-sm); /* Smaller button text */
+    font-weight: 600;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    text-align: center;
+    /* flex-grow: 1; */ /* Remove if only used for flex */
+    /* max-width: 150px; */ /* Remove or adjust - grid handles width now */
+}
+
+.btn--primary {
+    background-color: var(--color-primary);
+    color: white;
+}
+.btn--primary:hover:not(:disabled) {
+    background-color: var(--color-primary-dark);
+    box-shadow: 0 2px 4px rgba(0,0,0,.1);
+}
+
+.btn--secondary {
+    background-color: var(--color-button-secondary-bg); /* Use variable */
+    color: var(--color-button-secondary-text); /* Use variable */
+    border: 1px solid var(--color-button-secondary-border); /* Use variable */
+}
+.btn--secondary:hover:not(:disabled) {
+    background-color: var(--color-button-secondary-hover-bg); /* Use variable */
+    border-color: var(--color-button-secondary-hover-border); /* Use variable */
+}
+
+.btn:disabled {
+    background-color: var(--color-secondary-disabled);
+    color: #fff; /* White text on disabled */
+    cursor: not-allowed;
+    opacity: 0.7;
+    border-color: transparent; /* Remove border on disabled */
+}
+
+
+/* Part 6: Q-Value Display */
+.q-card {
+    width: auto; /* Let grid control width */
+    padding: var(--space-3);
+    font-size: var(--font-sm);
+    gap: var(--space-2); /* Gap between elements inside */
+}
+
+.q-card h4 {
+    margin: 0;
+    margin-bottom: var(--space-1);
+    color: var(--color-text-light);
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space-1);
+    font-size: var(--font-base);
+    text-align: center; /* Center Q-value title */
+    transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+.q-card p {
+    margin: 0;
+    text-align: center; /* Center state text */
+}
+
+.q-card p span {
+    font-weight: bold;
+    color: var(--color-text); /* Regular text color for state */
+    text-align: center; /* Keep consistent */
+}
+
+.q-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr; /* Equal column widths */
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+        ".    up    ."
+        "left mid right"
+        ".    down  .";
+    gap: var(--space-1); /* Reduced gap */
+    margin-bottom: var(--space-3); /* NEW: Add space below the Q grid */
+    align-items: center;
+    justify-items: center;
+    text-align: center;
+    width: 100%; /* Ensure grid takes full width */
+}
+
+.q-cell {
+    padding: 0; /* Remove padding */
+    display: flex; /* Use flex for alignment */
+    flex-direction: column; /* Stack arrow and value vertically */
+    align-items: center;
+    justify-content: center;
+    gap: 0; /* Remove gap, adjust spacing via padding/margin if needed */
+}
+
+/* Style the arrows */
+.q-arrow {
+    font-size: 2.6rem; /* Make arrows larger */
+    line-height: 1; /* Adjust line height to prevent extra spacing */
+    color: var(--color-text-light); /* Optional: slightly lighter color */
+    transition: color 0.3s ease;
+}
+
+.q-up   { grid-area: up; }
+.q-down { grid-area: down; }
+.q-left { grid-area: left; justify-self: end; }
+.q-right{ grid-area: right; justify-self: start; }
+.q-placeholder { grid-area: mid; }
+
+/* Style the Q-value numbers */
+.q-grid span:not(.q-arrow) { /* Exclude .q-arrow spans */
+    font-family: var(--font-mono);
+    font-size: var(--font-base); /* Larger Q-values */
+    font-weight: 600;
+    /* color: var(--color-q-value); /* Color applied dynamically by JS */
+    min-width: 3em; /* Ensure space for numbers like -0.00 */
+    text-align: center; /* Center numbers */
+    display: inline-block; /* Needed for alignment/width */
+}
+
+
+/* --- Action Probability Display Styles --- */
+
+.prob-title {
+    /* Style heading similarly to Q-value title */
+    margin: 0 0 var(--space-1) 0; /* Keep only bottom margin */
+    color: var(--color-text-light);
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space-1);
+    font-size: var(--font-base);
+    text-align: center; /* Center title */
+    transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+.p-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr; /* Equal column widths */
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+        ".    up    ."
+        "left mid right"
+        ".    down  .";
+    gap: var(--space-1); /* Reduced gap */
+    align-items: center;
+    justify-items: center;
+    text-align: center;
+    width: 100%; /* Ensure grid takes full width */
+}
+
+.p-cell {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+}
+
+/* Style the arrows (reuse Q-arrow style or make specific if needed) */
+.p-arrow {
+    font-size: 2.6rem; /* Make arrows larger to match Q-values */
+    line-height: 1;
+    color: var(--color-secondary); /* Use secondary color */
+    transition: color 0.3s ease;
+}
+
+.p-up    { grid-area: up; }
+.p-down  { grid-area: down; }
+.p-left  { grid-area: left; justify-self: end; }
+.p-right { grid-area: right; justify-self: start; }
+.p-placeholder { grid-area: mid; }
+
+/* Style the probability value numbers */
+.p-grid span:not(.p-arrow) { /* Target only value spans */
+    font-family: var(--font-mono);
+    font-size: var(--font-sm); /* Smaller probability values */
+    font-weight: 600; /* Make text bold */
+    /* color: var(--color-secondary); /* Color applied dynamically by JS */
+    min-width: 3em;
+    text-align: center;
+    display: inline-block;
+}
+
+
+/* Part 7: Responsiveness & Accessibility */
+/* Media queries handled in Part 2 */
+/* Ensure label 'for' matches input 'id' (checked in HTML) */
+/* Contrast checked (using variables helps manage this) */
+
+/* Add styles for the footer */
+.copyright-footer {
+    text-align: center;
+    margin-top: 20px; /* Add some space above the footer */
+    font-size: 0.8em;
+    color: var(--color-footer-text); /* Use variable */
+    transition: color 0.3s ease;
+}
+
+.field--slider label {
+    margin-bottom: 0; /* Remove bottom margin for slider labels */
+}
+
+.slider-container {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2); /* Space between slider and value */
+}
+
+.slider-container input[type="range"] {
+    flex-grow: 1; /* Allow slider to take up available space */
+    margin: 0; /* Remove default margins */
+    width: auto; /* Override default width */
+}
+
+.slider-value {
+    font-family: var(--font-mono);
+    font-size: var(--font-sm);
+    color: var(--color-text);
+    min-width: 3em; /* Ensure space for values like 0.00 */
+    text-align: right;
+    background-color: var(--color-slider-value-bg); /* Use variable */
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--color-slider-value-border); /* Use variable */
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* --- NEW Explanation Card Styles --- */
+.explanation-card {
+    /* grid-area: explanation; REMOVE */
+    /* width: 100%; REMOVE, let max-width control */
+    max-width: 1100px; /* Match max-width of main container */
+    width: 100%; /* Ensure it takes available width up to max */
+    margin-left: auto; /* Center */
+    margin-right: auto; /* Center */
+    margin-top: 0; /* Already spacing from main-container */
+    /* align-self: start; REMOVE */
+}
+
+.explanation-card h4 {
+    margin: 0 0 var(--space-2) 0;
+    padding-bottom: var(--space-1);
+    border-bottom: 1px solid var(--color-border);
+    color: var(--color-text-light);
+    font-size: var(--font-base);
+    transition: color 0.3s ease, border-color 0.3s ease;
+}
+#algorithmExplanation { margin-bottom: var(--space-3); }
+.explanation-card p, .explanation-card li { margin-bottom: var(--space-2); line-height: 1.6; font-size: var(--font-sm); }
+.explanation-card ul { padding-left: var(--space-3); margin-bottom: var(--space-2); }
+.explanation-card p:last-child, .explanation-card li:last-child { margin-bottom: 0; }
+.explanation-card .katex-display { margin: var(--space-2) 0; }
+.explanation-card strong { color: var(--color-primary); }
+/* --- End Explanation Card Styles --- */
+
+/* Adjust sim-card canvas */
+.sim-card canvas {
+     max-width: 100%;
+     aspect-ratio: 1 / 1;
+     object-fit: contain;
+     width: auto;
+     height: auto;
+     margin-top: var(--space-2);
+}
+
+/* --- NEW Theme Toggle Switch Styles --- */
+.theme-switch-wrapper {
+  position: absolute; /* Changed from fixed for better flow */
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 100; /* Ensure it's above other content */
+}
+
+.theme-switch {
+  position: relative;
+  display: inline-block;
+  width: 60px; /* Width of the switch */
+  height: 34px; /* Height of the switch */
+  /* Add some margin if needed */
+  /* margin: 5px; */
+}
+
+/* Hide default HTML checkbox */
+.theme-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The slider track */
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc; /* Default background */
+  -webkit-transition: .4s;
+  transition: .4s;
+  display: flex; /* To position icons inside */
+  align-items: center; /* Center icons vertically */
+  justify-content: space-between; /* Icons at edges initially */
+  padding: 0 5px; /* Padding around icons */
+  box-sizing: border-box; /* Include padding in dimensions */
+}
+
+/* The sliding knob */
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px; /* Height of the knob */
+  width: 26px; /* Width of the knob */
+  left: 4px; /* Initial position from left */
+  bottom: 4px; /* Position from bottom */
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+/* Style icons */
+.sun-icon, .moon-icon {
+    font-size: 16px; /* Adjust icon size */
+    line-height: 1; /* Prevent extra space */
+    transition: opacity 0.4s ease;
+    color: #fff; /* Make icons white for contrast on slider */
+    /* Prevent text selection */
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Initial state: Light mode (checkbox is CHECKED) */
+.sun-icon { opacity: 1; }
+.moon-icon { opacity: 0; }
+
+input:checked + .slider {
+  background-color: var(--color-primary); /* Slider color when ON (Light Mode) */
+}
+
+input:checked + .slider:before {
+  /* Move knob to the right when ON (Light Mode) */
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
+
+/* Dark Mode state (checkbox is UNCHECKED) */
+input:not(:checked) + .slider {
+    background-color: #555; /* Dark grey slider background */
+}
+
+input:not(:checked) + .slider .sun-icon {
+    opacity: 0; /* Hide sun in dark mode */
+}
+input:not(:checked) + .slider .moon-icon {
+    opacity: 1; /* Show moon in dark mode */
+}
+
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+/* --- End Theme Toggle Switch Styles --- */
+
+/* --- NEW GitHub Link Styles --- */
+.github-link {
+    position: absolute;
+    top: var(--space-3);
+    left: var(--space-3);
+    z-index: 100;
+    opacity: 0.85;
+    transition: opacity 0.3s ease;
+}
+
+.github-link:hover {
+    opacity: 1;
+}
+
+.github-mark {
+    width: 32px;
+    height: 32px;
+    display: block;
+}
+
+.dark-mode-only {
+    display: none;
+}
+
+.light-mode-only {
+    display: block;
+}
+
+body.dark-mode .dark-mode-only {
+    display: block;
+    filter: invert(1); /* ADDED: Invert color for dark mode */
+}
+
+body.dark-mode .light-mode-only {
+    display: none;
+}
+/* --- End GitHub Link Styles --- */
+
+/* ... rest of styles ... */ 
