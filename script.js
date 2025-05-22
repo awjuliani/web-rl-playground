@@ -18,28 +18,17 @@ import {
 } from './environment.js';
 
 import {
-    qTable, // Import qTable directly from algorithms.js
-    vTable, // Import vTable
-    hTable, // Import hTable
-    mTable, // Import mTable
-    wTable, // Import wTable
-    // Import CURRENT parameter values
-    learningRate, discountFactor, explorationRate, softmaxBeta,
-    explorationStrategy, selectedAlgorithm,
-    // Keep initial values for initial setup
-    learningRate as initialLr, discountFactor as initialDf, explorationRate as initialEr,
-    softmaxBeta as initialBeta, explorationStrategy as initialExplorationStrategy,
-    selectedAlgorithm as initialAlgo,
-    initializeTables, // Use the renamed function
-    learningStep,
+    qTable, vTable, hTable, mTable, wTable,
+    // Use getter functions instead of direct imports
+    getLearningRate, getDiscountFactor, getExplorationRate, getSoftmaxBeta,
+    getExplorationStrategy, getSelectedAlgorithm,
+    // Keep the update functions
+    initializeTables, learningStep,
     updateLearningRate, updateDiscountFactor, updateExplorationRate, updateSoftmaxBeta, updateExplorationStrategy,
     updateSelectedAlgorithm, applyMonteCarloUpdates,
-    getActionProbabilities, // Import the new function
-    getBestActions,
-    calculateQValueSR, // Import SR Q calculation helper
-    // RENAMED: Import specific learning rates (srW instead of srR)
+    getActionProbabilities, getBestActions, calculateQValueSR,
+    // Keep specific learning rates and their update functions
     actorLearningRate, criticLearningRate, srMWeightLearningRate, srWWeightLearningRate,
-    // RENAMED: Import specific LR update functions (updateSRW instead of updateSRR)
     updateActorLearningRate, updateCriticLearningRate, updateSRMLearningRate, updateSRWLearningRate,
 } from './algorithms.js';
 
@@ -203,8 +192,8 @@ function updateExplanationText() {
         return;
     }
 
-    const algoKey = selectedAlgorithm;
-    const strategyKey = explorationStrategy;
+    const algoKey = getSelectedAlgorithm();
+    const strategyKey = getExplorationStrategy();
 
     const algoInfo = explanations.algorithms[algoKey];
     const strategyInfo = explanations.strategies[strategyKey];
@@ -244,13 +233,15 @@ function updateExplanationText() {
 function drawEverything() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    const algorithm = getSelectedAlgorithm();
+
     // 1. Draw Cell Background/Policy/SR Vector OR Nothing
     if (cellDisplayMode === 'values-color') {
-        drawValues(ctx, gridSize, cellSize, qTable, vTable, mTable, wTable, selectedAlgorithm, false);
+        drawValues(ctx, gridSize, cellSize, qTable, vTable, mTable, wTable, algorithm, false);
     } else if (cellDisplayMode === 'values-text') {
-        drawValues(ctx, gridSize, cellSize, qTable, vTable, mTable, wTable, selectedAlgorithm, true);
+        drawValues(ctx, gridSize, cellSize, qTable, vTable, mTable, wTable, algorithm, true);
     } else if (cellDisplayMode === 'policy') {
-        drawPolicyArrows(ctx, gridSize, cellSize, qTable, hTable, mTable, wTable, selectedAlgorithm, takeAction, agentPos);
+        drawPolicyArrows(ctx, gridSize, cellSize, qTable, hTable, mTable, wTable, algorithm, takeAction, agentPos);
     } else if (cellDisplayMode === 'sr-vector') { // Agent-based SR
         const agentStateKey = `${agentPos.x},${agentPos.y}`;
         drawSRVector(ctx, gridSize, cellSize, agentStateKey, mTable, true);
@@ -290,9 +281,10 @@ function updateQValueOrPreferenceDisplay() {
 
     // Update header text based on algorithm
     if (qValueDisplayHeader) {
-        if (selectedAlgorithm === 'actor-critic') {
+        const algorithm = getSelectedAlgorithm();
+        if (algorithm === 'actor-critic') {
             qValueDisplayHeader.textContent = 'Action Preferences h(s,a)';
-        } else if (selectedAlgorithm === 'sr') {
+        } else if (algorithm === 'sr') {
              qValueDisplayHeader.textContent = 'Estimated Q(s,a) [from SR]';
         } else {
             qValueDisplayHeader.textContent = 'Action Values Q(s,a)';
@@ -312,19 +304,19 @@ function updateQValueOrPreferenceDisplay() {
         }
     };
 
-    if (selectedAlgorithm === 'actor-critic') {
+    if (getSelectedAlgorithm() === 'actor-critic') {
         // Display H-values (preferences)
         const statePreferences = hTable[currentState] || {};
         setDisplayValue(qUpSpan, statePreferences['up']);
         setDisplayValue(qDownSpan, statePreferences['down']);
         setDisplayValue(qLeftSpan, statePreferences['left']);
         setDisplayValue(qRightSpan, statePreferences['right']);
-    } else if (selectedAlgorithm === 'sr') {
+    } else if (getSelectedAlgorithm() === 'sr') {
         // Display SR-based Q-values
-        setDisplayValue(qUpSpan, calculateQValueSR(currentState, 'up', mTable, wTable, gridSize, discountFactor, takeAction, agentPos));
-        setDisplayValue(qDownSpan, calculateQValueSR(currentState, 'down', mTable, wTable, gridSize, discountFactor, takeAction, agentPos));
-        setDisplayValue(qLeftSpan, calculateQValueSR(currentState, 'left', mTable, wTable, gridSize, discountFactor, takeAction, agentPos));
-        setDisplayValue(qRightSpan, calculateQValueSR(currentState, 'right', mTable, wTable, gridSize, discountFactor, takeAction, agentPos));
+        setDisplayValue(qUpSpan, calculateQValueSR(currentState, 'up', mTable, wTable, gridSize, getDiscountFactor(), takeAction, agentPos));
+        setDisplayValue(qDownSpan, calculateQValueSR(currentState, 'down', mTable, wTable, gridSize, getDiscountFactor(), takeAction, agentPos));
+        setDisplayValue(qLeftSpan, calculateQValueSR(currentState, 'left', mTable, wTable, gridSize, getDiscountFactor(), takeAction, agentPos));
+        setDisplayValue(qRightSpan, calculateQValueSR(currentState, 'right', mTable, wTable, gridSize, getDiscountFactor(), takeAction, agentPos));
     } else {
         // Display standard Q-values
         const stateQValues = qTable[currentState] || {};
@@ -634,7 +626,7 @@ function learningLoopStep() {
             totalRewardForEpisode = 0;
             currentEpisodeSteps = 0;
 
-            if (selectedAlgorithm === 'monte-carlo') {
+            if (getSelectedAlgorithm() === 'monte-carlo') {
                 applyMonteCarloUpdates();
             }
             resetAgent();
@@ -700,11 +692,11 @@ function stopLearning() {
         rewardAnimation = { text: '', pos: null, alpha: 0, offsetY: 0, startTime: 0, duration: 600 };
         rewardAnimationFrameId = null;
 
-        // Update UI elements...
-        lrValueSpan.textContent = learningRate.toFixed(2);
-        discountValueSpan.textContent = discountFactor.toFixed(2);
-        epsilonValueSpan.textContent = explorationRate.toFixed(2);
-        softmaxBetaValueSpan.textContent = softmaxBeta.toFixed(1);
+        // Update UI elements using getter functions...
+        lrValueSpan.textContent = getLearningRate().toFixed(2);
+        discountValueSpan.textContent = getDiscountFactor().toFixed(2);
+        epsilonValueSpan.textContent = getExplorationRate().toFixed(2);
+        softmaxBetaValueSpan.textContent = getSoftmaxBeta().toFixed(1);
         speedValueSpan.textContent = (1010 - simulationSpeed).toString();
         gridSizeValueSpan.textContent = gridSizeSlider.value;
         stepPenaltyValueSpan.textContent = parseFloat(stepPenaltySlider.value).toFixed(1);
@@ -712,13 +704,13 @@ function stopLearning() {
         gemRewardValueSpan.textContent = gemRewardSlider.value;
         badStateRewardValueSpan.textContent = badStateRewardSlider.value;
 
-        lrSlider.value = learningRate;
-        discountSlider.value = discountFactor;
-        epsilonSlider.value = explorationRate;
-        softmaxBetaSlider.value = softmaxBeta;
+        lrSlider.value = getLearningRate();
+        discountSlider.value = getDiscountFactor();
+        epsilonSlider.value = getExplorationRate();
+        softmaxBetaSlider.value = getSoftmaxBeta();
         gridSizeSlider.value = gridSize;
         maxStepsSlider.value = maxStepsPerEpisode;
-        algorithmSelect.value = selectedAlgorithm;
+        algorithmSelect.value = getSelectedAlgorithm();
         speedSlider.value = 1010 - simulationSpeed;
         cellDisplayMode = cellDisplayModeSelect.value;
         gemRewardSlider.value = parseFloat(gemRewardValueSpan.textContent);
@@ -728,81 +720,64 @@ function stopLearning() {
     }
 }
 
-// Renamed original reset to resetAllAndDraw - used for full resets (init, grid size change)
-function resetAllAndDraw() {
+// Add a base reset function:
+function performReset(resetType) {
     stopLearning();
-
-    updateTerminateOnGemSetting();
-    updateSelectedAlgorithm(algorithmSelect.value);
-    maxStepsPerEpisode = parseInt(maxStepsSlider.value, 10);
-    setStepPenalty(parseFloat(stepPenaltySlider.value));
-
-    // Reset environment layout AND agent start position to default
-    initializeGridRewards(gridSize);
-    setStartPos({ x: 0, y: 0 }, gridSize);
-
-    // Reset agent state and learning progress
-    initializeTables(gridSize);
+    
+    // Common reset actions
+    if (resetType !== 'agent-only') {
+        updateTerminateOnGemSetting();
+        updateSelectedAlgorithm(algorithmSelect.value);
+        maxStepsPerEpisode = parseInt(maxStepsSlider.value, 10);
+        setStepPenalty(parseFloat(stepPenaltySlider.value));
+    }
+    
+    // Environment reset
+    if (resetType === 'full' || resetType === 'environment') {
+        initializeGridRewards(gridSize);
+        setStartPos({ x: 0, y: 0 }, gridSize);
+    }
+    
+    // Agent knowledge reset
+    if (resetType === 'full' || resetType === 'agent') {
+        initializeTables(gridSize);
+        
+        // Reset chart data and counters
+        episodeCounter = 0;
+        totalRewardForEpisode = 0;
+        episodicRewards = [];
+        smoothedEpisodicRewards = [];
+        episodeNumbers = [];
+        initializeRewardChart();
+    }
+    
+    // Physical agent reset (always needed)
     resetAgent();
-
-    // Reset chart data and counters
-    episodeCounter = 0;
-    totalRewardForEpisode = 0;
-    episodicRewards = [];
-    smoothedEpisodicRewards = [];
-    episodeNumbers = [];
-    initializeRewardChart();
-
-    // Reset animation/visual state
+    
+    // Visual state reset
     visualAgentPos = { ...agentPos };
     isAnimating = false;
     currentEpisodeSteps = 0;
-
-    updateExplanationText();
-
+    
+    if (resetType === 'full') {
+        updateExplanationText();
+    }
+    
     drawEverything();
 }
 
-// Logic for Reset Agent button
+// Simplify the individual reset functions:
+function resetAllAndDraw() {
+    performReset('full');
+}
+
 function resetAgentLogic() {
-    stopLearning();
-
-    // Reset only the agent's knowledge and progress
-    initializeTables(gridSize);
-    resetAgent();
-
-    // Reset chart data and counters
-    episodeCounter = 0;
-    totalRewardForEpisode = 0;
-    episodicRewards = [];
-    smoothedEpisodicRewards = [];
-    episodeNumbers = [];
-    initializeRewardChart();
-
-    // Reset animation/visual state
-    visualAgentPos = { ...agentPos };
-    isAnimating = false;
-    currentEpisodeSteps = 0;
-
-    drawEverything();
+    performReset('agent');
     console.log("Agent learning progress (Q/V/H tables) reset.");
 }
 
-// Logic for Reset Environment button
 function resetEnvironmentLogic() {
-    stopLearning();
-
-    // Reset only the environment layout and agent's physical position
-    initializeGridRewards(gridSize);
-    setStartPos({ x: 0, y: 0 }, gridSize);
-    resetAgent();
-
-    // Reset animation/visual state (agent moved)
-    visualAgentPos = { ...agentPos };
-    isAnimating = false;
-    currentEpisodeSteps = 0;
-
-    drawEverything();
+    performReset('environment');
     console.log("Environment layout and start position reset to default.");
 }
 
@@ -856,38 +831,26 @@ stopButton.addEventListener('click', stopLearning);
 resetAgentButton.addEventListener('click', resetAgentLogic);
 resetEnvironmentButton.addEventListener('click', resetEnvironmentLogic);
 
-lrSlider.addEventListener('input', () => {
-    const value = parseFloat(lrSlider.value);
-    updateLearningRate(value);
-    lrValueSpan.textContent = value.toFixed(2);
+// Add this helper function near the top:
+function createSliderHandler(updateFunction, valueSpan, formatter = (v) => v.toFixed(2)) {
+    return (slider) => {
+        slider.addEventListener('input', () => {
+            const value = parseFloat(slider.value);
+            updateFunction(value);
+            valueSpan.textContent = formatter(value);
+        });
+    };
+}
 
-    // ALSO update the specific sliders and their display values to match the main LR
-    // This provides a consistent baseline when the main slider is moved.
-    actorLrSlider.value = value;
-    actorLrValueSpan.textContent = value.toFixed(2);
-    criticLrSlider.value = value;
-    criticLrValueSpan.textContent = value.toFixed(2);
-    srMLrSlider.value = value;
-    srMLrValueSpan.textContent = value.toFixed(2);
-    srWLrSlider.value = value;
-    srWLrValueSpan.textContent = value.toFixed(2);
-});
+// Replace repetitive slider event listeners:
+createSliderHandler(updateLearningRate, lrValueSpan)(lrSlider);
+createSliderHandler(updateDiscountFactor, discountValueSpan)(discountSlider);
+createSliderHandler(updateExplorationRate, epsilonValueSpan)(epsilonSlider);
+createSliderHandler(updateSoftmaxBeta, softmaxBetaValueSpan, (v) => v.toFixed(1))(softmaxBetaSlider);
+createSliderHandler(setStepPenalty, stepPenaltyValueSpan, (v) => v.toFixed(1))(stepPenaltySlider);
+createSliderHandler(setGemRewardMagnitude, gemRewardValueSpan, (v) => v.toString())(gemRewardSlider);
+createSliderHandler(setBadStateRewardMagnitude, badStateRewardValueSpan, (v) => v.toString())(badStateRewardSlider);
 
-discountSlider.addEventListener('input', () => {
-    const value = parseFloat(discountSlider.value);
-    updateDiscountFactor(value);
-    discountValueSpan.textContent = value.toFixed(2);
-});
-epsilonSlider.addEventListener('input', () => {
-    const value = parseFloat(epsilonSlider.value);
-    updateExplorationRate(value);
-    epsilonValueSpan.textContent = value.toFixed(2);
-});
-softmaxBetaSlider.addEventListener('input', () => {
-    const value = parseFloat(softmaxBetaSlider.value);
-    updateSoftmaxBeta(value);
-    softmaxBetaValueSpan.textContent = value.toFixed(1);
-});
 gridSizeSlider.addEventListener('input', () => {
     const newSizeValue = parseInt(gridSizeSlider.value, 10);
     gridSizeValueSpan.textContent = newSizeValue.toString();
@@ -906,80 +869,61 @@ gridSizeSlider.addEventListener('input', () => {
         console.log("Grid size changed, full reset performed.");
     }
 });
+
+// Add this helper function:
+function updateControlVisibility(algorithm, explorationStrategy) {
+    const controls = {
+        strategy: explorationStrategySelect.parentElement,
+        epsilon: epsilonSlider.parentElement.parentElement,
+        softmaxBeta: softmaxBetaControl,
+        mainLR: lrControl,
+        actorLR: actorCriticLRControl,
+        criticLR: criticLRControl,
+        srMLR: srMLRControl,
+        srWLR: srWLRControl,
+        srVectorAgent: srVectorAgentDisplayOption,
+        srVectorHover: srVectorHoverDisplayOption
+    };
+
+    // Hide all controls initially
+    Object.values(controls).forEach(control => {
+        if (control) control.style.display = 'none';
+    });
+
+    // Show controls based on algorithm
+    if (algorithm === 'actor-critic') {
+        controls.softmaxBeta.style.display = '';
+        controls.actorLR.style.display = '';
+        controls.criticLR.style.display = '';
+    } else if (algorithm === 'sr') {
+        controls.strategy.style.display = '';
+        controls.srMLR.style.display = '';
+        controls.srWLR.style.display = '';
+        controls.srVectorAgent.style.display = '';
+        controls.srVectorHover.style.display = '';
+        updateExplorationControlVisibility(explorationStrategy);
+    } else {
+        controls.strategy.style.display = '';
+        controls.mainLR.style.display = '';
+        updateExplorationControlVisibility(explorationStrategy);
+    }
+}
+
+// Use this function in algorithmSelect event listener and initializeApp:
 algorithmSelect.addEventListener('change', () => {
     stopLearning();
     const newAlgo = algorithmSelect.value;
     updateSelectedAlgorithm(newAlgo);
     updateExplanationText();
-
-    // --- UI Element Visibility ---
-    const strategyField = explorationStrategySelect.parentElement;
-    const epsilonField = epsilonSlider.parentElement.parentElement;
-
-    // Hide all specific LR controls by default
-    actorCriticLRControl.style.display = 'none';
-    criticLRControl.style.display = 'none';
-    srMLRControl.style.display = 'none';
-    srWLRControl.style.display = 'none';
-    // Hide exploration strategy/epsilon/softmax controls initially, show as needed
-    if (strategyField) strategyField.style.display = 'none';
-    if (epsilonField) epsilonField.style.display = 'none';
-    softmaxBetaControl.style.display = 'none';
-    // Hide main LR slider by default, show as needed
-    if (lrControl) lrControl.style.display = 'none';
-
-
-    // --- SR Display Option Visibility ---
-    if (newAlgo === 'sr') {
-        srVectorAgentDisplayOption.style.display = '';
-        srVectorHoverDisplayOption.style.display = '';
-        // Show SR specific LR controls
-        srMLRControl.style.display = '';
-        srWLRControl.style.display = '';
-        // Hide main LR control for SR
-        if (lrControl) lrControl.style.display = 'none';
-    } else {
-        srVectorAgentDisplayOption.style.display = 'none';
-        srVectorHoverDisplayOption.style.display = 'none';
-         if (cellDisplayModeSelect.value === 'sr-vector' || cellDisplayModeSelect.value === 'sr-vector-hover') {
-             cellDisplayModeSelect.value = 'values-color';
-             cellDisplayMode = 'values-color';
-         }
+    updateControlVisibility(newAlgo, explorationStrategySelect.value);
+    
+    // Handle display mode visibility for SR
+    if (newAlgo !== 'sr' && (cellDisplayModeSelect.value === 'sr-vector' || cellDisplayModeSelect.value === 'sr-vector-hover')) {
+        cellDisplayModeSelect.value = 'values-color';
+        cellDisplayMode = 'values-color';
     }
-    // --- End SR Display Option Visibility ---
-
-    // --- Exploration & Specific/Main LR Control Visibility ---
-    if (newAlgo === 'actor-critic') {
-        // AC uses softmax implicitly, show Beta control
-        softmaxBetaControl.style.display = '';
-        // Show Actor-Critic specific LR controls
-        actorCriticLRControl.style.display = '';
-        criticLRControl.style.display = '';
-        // Hide main LR control for AC
-        if (lrControl) lrControl.style.display = 'none';
-        // Hide general exploration strategy/epsilon
-        if (strategyField) strategyField.style.display = 'none';
-        if (epsilonField) epsilonField.style.display = 'none';
-    } else { // Handles QL, SARSA, ES, MC, SR (non-AC algos)
-         // Show standard exploration strategy controls
-         if (strategyField) strategyField.style.display = '';
-         const currentStrategy = explorationStrategySelect.value;
-         // Update visibility based on the CURRENTLY selected strategy
-         updateExplorationControlVisibility(currentStrategy);
-
-         if (newAlgo === 'sr') {
-             // SR specific LR controls (srWLRControl) are already shown above
-             // Main LR control is already hidden above
-         } else { // QL, SARSA, ES, MC
-             // Show main LR control for these algorithms
-             if (lrControl) lrControl.style.display = '';
-             // Ensure AC/SR specific LR controls remain hidden (done by default at start)
-         }
-    }
-    // --- End Exploration Control Visibility ---
-
+    
     resetAgentLogic();
-
     console.log("Algorithm changed to:", newAlgo, "- Agent reset.");
 });
 
@@ -999,7 +943,7 @@ function updateExplorationControlVisibility(strategy) {
 }
 
 explorationStrategySelect.addEventListener('change', () => {
-    if (selectedAlgorithm !== 'actor-critic') {
+    if (getSelectedAlgorithm() !== 'actor-critic') {
         stopLearning();
         const newStrategy = explorationStrategySelect.value;
         updateExplorationStrategy(newStrategy);
@@ -1047,44 +991,6 @@ canvas.addEventListener('click', (event) => {
             drawEverything();
             // Let the agent learn the new state dynamically.
         }
-    }
-});
-
-stepPenaltySlider.addEventListener('input', () => {
-    const value = parseFloat(stepPenaltySlider.value);
-    setStepPenalty(value);
-    stepPenaltyValueSpan.textContent = value.toFixed(1);
-});
-
-canvas.addEventListener('mousemove', (event) => {
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = event.clientX - rect.left;
-    const mouseY = event.clientY - rect.top;
-
-    const gridX = Math.floor(mouseX / cellSize);
-    const gridY = Math.floor(mouseY / cellSize);
-
-    if (gridX >= 0 && gridX < gridSize && gridY >= 0 && gridY < gridSize) {
-        const currentHover = { x: gridX, y: gridY };
-        if (!hoveredCell || hoveredCell.x !== currentHover.x || hoveredCell.y !== currentHover.y) {
-            hoveredCell = currentHover;
-            // Only redraw if not currently animating to avoid visual conflicts
-            if (!isAnimating) drawEverything();
-        }
-    } else {
-        if (hoveredCell) {
-            hoveredCell = null;
-             // Only redraw if not currently animating
-            if (!isAnimating) drawEverything();
-        }
-    }
-});
-
-canvas.addEventListener('mouseout', () => {
-    if (hoveredCell) {
-        hoveredCell = null;
-        // Only redraw if not currently animating
-        if (!isAnimating) drawEverything();
     }
 });
 
@@ -1181,25 +1087,6 @@ themeToggleCheckbox.addEventListener('change', () => {
     setTheme(themeToggleCheckbox.checked ? 'light' : 'dark');
 });
 
-// --- NEW: Reward Magnitude Slider Listeners ---
-gemRewardSlider.addEventListener('input', () => {
-    const value = parseFloat(gemRewardSlider.value);
-    setGemRewardMagnitude(value);
-    gemRewardValueSpan.textContent = value.toString();
-    // Optional: Redraw values immediately if desired, though learning loop handles it too
-    // if (!isLearning) drawEverything();
-});
-
-badStateRewardSlider.addEventListener('input', () => {
-    const value = parseFloat(badStateRewardSlider.value);
-    setBadStateRewardMagnitude(value);
-    badStateRewardValueSpan.textContent = value.toString();
-    // Optional: Redraw values immediately if desired
-    // if (!isLearning) drawEverything();
-});
-// --- End Reward Magnitude Slider Listeners ---
-
-
 // --- Initial Setup ---
 async function initializeApp() {
     // NEW: Set initial theme based on localStorage or system preference
@@ -1217,18 +1104,18 @@ async function initializeApp() {
     gridSizeSlider.value = gridSize;
     stepPenaltySlider.value = parseFloat(stepPenaltySlider.value);
     maxStepsSlider.value = maxStepsPerEpisode;
-    explorationStrategySelect.value = initialExplorationStrategy;
-    algorithmSelect.value = initialAlgo;
+    explorationStrategySelect.value = getExplorationStrategy();
+    algorithmSelect.value = getSelectedAlgorithm();
     cellDisplayModeSelect.value = cellDisplayMode;
     terminateOnRewardCheckbox.checked = terminateOnGem;
 
     // Update the parameters in algorithms.js and environment.js to match initial UI/defaults
-    updateLearningRate(initialLr);
-    updateDiscountFactor(initialDf);
-    updateExplorationRate(initialEr);
-    updateSoftmaxBeta(initialBeta);
-    updateExplorationStrategy(initialExplorationStrategy);
-    updateSelectedAlgorithm(initialAlgo);
+    updateLearningRate(getLearningRate());
+    updateDiscountFactor(getDiscountFactor());
+    updateExplorationRate(getExplorationRate());
+    updateSoftmaxBeta(getSoftmaxBeta());
+    updateExplorationStrategy(getExplorationStrategy());
+    updateSelectedAlgorithm(getSelectedAlgorithm());
     setStepPenalty(parseFloat(stepPenaltySlider.value));
     setGemRewardMagnitude(initialGemReward);
     setBadStateRewardMagnitude(initialBadReward);
@@ -1259,7 +1146,7 @@ async function initializeApp() {
 
 
     // --- Set initial visibility for SR display options AND specific LR controls ---
-    if (initialAlgo === 'sr') {
+    if (getSelectedAlgorithm() === 'sr') {
         srVectorAgentDisplayOption.style.display = '';
         srVectorHoverDisplayOption.style.display = '';
         // Show SR specific LR controls
@@ -1280,7 +1167,7 @@ async function initializeApp() {
 
 
     // --- Set initial visibility for Exploration AND AC/SR specific LR controls ---
-    if (initialAlgo === 'actor-critic') {
+    if (getSelectedAlgorithm() === 'actor-critic') {
          // AC uses softmax implicitly, show Beta control
         softmaxBetaControl.style.display = '';
         // Show Actor-Critic specific LR controls
@@ -1295,9 +1182,9 @@ async function initializeApp() {
          // Show standard exploration strategy controls
          if (strategyField) strategyField.style.display = '';
          // Update visibility based on the INITIAL strategy
-         updateExplorationControlVisibility(initialExplorationStrategy);
+         updateExplorationControlVisibility(getExplorationStrategy());
 
-         if (initialAlgo === 'sr') {
+         if (getSelectedAlgorithm() === 'sr') {
              // SR specific LR controls (srWLRControl) are already shown above
              // Main LR control is already hidden above
          } else { // QL, SARSA, ES, MC

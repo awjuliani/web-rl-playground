@@ -674,78 +674,46 @@ let algorithmManager = new AlgorithmManager('q-learning', 5, {
 // Export the algorithm manager for direct access
 export { algorithmManager };
 
-// Backward compatibility exports - fix the proxy implementation
-export const qTable = new Proxy({}, {
-    get: (target, prop) => {
-        if (prop === Symbol.iterator || typeof prop === 'symbol') return undefined;
-        return algorithmManager.qTable[prop];
-    },
-    has: (target, prop) => prop in algorithmManager.qTable,
-    ownKeys: () => Object.keys(algorithmManager.qTable),
-    getOwnPropertyDescriptor: (target, prop) => {
-        if (prop in algorithmManager.qTable) {
-            return { enumerable: true, configurable: true, value: algorithmManager.qTable[prop] };
+// Replace all individual proxy objects with a factory function
+function createTableProxy(tableGetter) {
+    return new Proxy({}, {
+        get: (target, prop) => {
+            if (prop === Symbol.iterator || typeof prop === 'symbol') return undefined;
+            return tableGetter()[prop];
+        },
+        has: (target, prop) => prop in tableGetter(),
+        ownKeys: () => Object.keys(tableGetter()),
+        getOwnPropertyDescriptor: (target, prop) => {
+            if (prop in tableGetter()) {
+                return { enumerable: true, configurable: true, value: tableGetter()[prop] };
+            }
         }
-    }
-});
+    });
+}
 
-export const vTable = new Proxy({}, {
-    get: (target, prop) => {
-        if (prop === Symbol.iterator || typeof prop === 'symbol') return undefined;
-        return algorithmManager.vTable[prop];
-    },
-    has: (target, prop) => prop in algorithmManager.vTable,
-    ownKeys: () => Object.keys(algorithmManager.vTable),
-    getOwnPropertyDescriptor: (target, prop) => {
-        if (prop in algorithmManager.vTable) {
-            return { enumerable: true, configurable: true, value: algorithmManager.vTable[prop] };
-        }
-    }
-});
-
-export const hTable = new Proxy({}, {
-    get: (target, prop) => {
-        if (prop === Symbol.iterator || typeof prop === 'symbol') return undefined;
-        return algorithmManager.hTable[prop];
-    },
-    has: (target, prop) => prop in algorithmManager.hTable,
-    ownKeys: () => Object.keys(algorithmManager.hTable),
-    getOwnPropertyDescriptor: (target, prop) => {
-        if (prop in algorithmManager.hTable) {
-            return { enumerable: true, configurable: true, value: algorithmManager.hTable[prop] };
-        }
-    }
-});
-
-export const mTable = new Proxy({}, {
-    get: (target, prop) => {
-        if (prop === Symbol.iterator || typeof prop === 'symbol') return undefined;
-        return algorithmManager.mTable[prop];
-    },
-    has: (target, prop) => prop in algorithmManager.mTable,
-    ownKeys: () => Object.keys(algorithmManager.mTable),
-    getOwnPropertyDescriptor: (target, prop) => {
-        if (prop in algorithmManager.mTable) {
-            return { enumerable: true, configurable: true, value: algorithmManager.mTable[prop] };
-        }
-    }
-});
-
-export const wTable = new Proxy({}, {
-    get: (target, prop) => {
-        if (prop === Symbol.iterator || typeof prop === 'symbol') return undefined;
-        return algorithmManager.wTable[prop];
-    },
-    has: (target, prop) => prop in algorithmManager.wTable,
-    ownKeys: () => Object.keys(algorithmManager.wTable),
-    getOwnPropertyDescriptor: (target, prop) => {
-        if (prop in algorithmManager.wTable) {
-            return { enumerable: true, configurable: true, value: algorithmManager.wTable[prop] };
-        }
-    }
-});
+// Replace all the individual proxy exports with this:
+export const qTable = createTableProxy(() => algorithmManager.qTable);
+export const vTable = createTableProxy(() => algorithmManager.vTable);
+export const hTable = createTableProxy(() => algorithmManager.hTable);
+export const mTable = createTableProxy(() => algorithmManager.mTable);
+export const wTable = createTableProxy(() => algorithmManager.wTable);
 
 // Configuration getters
+export const getConfig = () => algorithmManager.currentAlgorithm.config;
+export const getLearningRate = () => algorithmManager.currentAlgorithm.config.learningRate;
+export const getDiscountFactor = () => algorithmManager.currentAlgorithm.config.discountFactor;
+export const getExplorationRate = () => algorithmManager.currentAlgorithm.config.explorationRate;
+export const getSoftmaxBeta = () => algorithmManager.currentAlgorithm.config.softmaxBeta;
+export const getExplorationStrategy = () => algorithmManager.currentAlgorithm.config.explorationStrategy;
+export const getSelectedAlgorithm = () => algorithmManager.algorithmType;
+
+// Specific learning rate getters for different algorithms
+export const getActorLearningRate = () => algorithmManager.currentAlgorithm.config.actorLearningRate;
+export const getCriticLearningRate = () => algorithmManager.currentAlgorithm.config.criticLearningRate;
+export const getSRMWeightLearningRate = () => algorithmManager.currentAlgorithm.config.srMWeightLearningRate;
+export const getSRWWeightLearningRate = () => algorithmManager.currentAlgorithm.config.srWWeightLearningRate;
+
+// Backward compatibility - keep these exports for now until all references are updated
 export let learningRate = 0.1;
 export let actorLearningRate = 0.1;
 export let criticLearningRate = 0.1;
