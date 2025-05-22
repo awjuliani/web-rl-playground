@@ -251,30 +251,35 @@ import {
     mTable, wTable, // Import SR tables
     selectedAlgorithm,
     calculateVValueSR, // Import SR V calculation helper
-    discountFactor
+    discountFactor,
+    getValueForState // Import the helper function
 } from './algorithms.js';
 
 // Helper function to get the Value (max Q or V(s)) for a state
 function getValue(state, qTable, vTable, mTable, wTable, currentAlgorithm, gridSize) {
-    if (currentAlgorithm === 'actor-critic') {
-        // For Actor-Critic, the value is V(s) from vTable
-        return vTable[state] !== undefined ? vTable[state] : 0;
-    } else if (currentAlgorithm === 'sr') {
-        // Pass discountFactor needed by calculateVValueSR
-        return calculateVValueSR(state, mTable, wTable, gridSize, discountFactor);
-    } else {
-        // For Q-learning, SARSA, etc., value is max Q(s,a) from qTable
-        if (!qTable || !qTable[state]) return 0;
-        let maxQ = -Infinity;
-        for (const action of actions) {
-            if (qTable[state][action] !== undefined && qTable[state][action] > maxQ) {
-                maxQ = qTable[state][action];
+    try {
+        // Use the helper function
+        return getValueForState(state);
+    } catch (error) {
+        console.warn('Error accessing algorithm value, falling back to direct table access:', error);
+        
+        // Fallback to direct table access
+        if (currentAlgorithm === 'actor-critic') {
+            return vTable[state] !== undefined ? vTable[state] : 0;
+        } else if (currentAlgorithm === 'sr') {
+            return calculateVValueSR(state, mTable, wTable, gridSize, discountFactor);
+        } else {
+            if (!qTable || !qTable[state]) return 0;
+            let maxQ = -Infinity;
+            for (const action of actions) {
+                if (qTable[state][action] !== undefined && qTable[state][action] > maxQ) {
+                    maxQ = qTable[state][action];
+                }
             }
+            return maxQ === -Infinity ? 0 : maxQ;
         }
-        return maxQ === -Infinity ? 0 : maxQ;
     }
 }
-
 
 // Helper function to find min/max V(s) across the grid
 function getMinMaxValues(gridSize, qTable, vTable, mTable, wTable, currentAlgorithm) {
