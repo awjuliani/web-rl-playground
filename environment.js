@@ -249,32 +249,37 @@ export function drawCellStates(gridSize, cellSize) {
 import {
     actions, getBestActions, getActionProbabilities, qTable, vTable, hTable,
     mTable, wTable, // Import SR tables
-    selectedAlgorithm,
+    getSelectedAlgorithm, // Use getter instead of selectedAlgorithm
     calculateVValueSR, // Import SR V calculation helper
-    discountFactor
+    getDiscountFactor, // Use getter instead of discountFactor
+    getValueForState // Import the helper function
 } from './algorithms.js';
 
 // Helper function to get the Value (max Q or V(s)) for a state
 function getValue(state, qTable, vTable, mTable, wTable, currentAlgorithm, gridSize) {
-    if (currentAlgorithm === 'actor-critic') {
-        // For Actor-Critic, the value is V(s) from vTable
-        return vTable[state] !== undefined ? vTable[state] : 0;
-    } else if (currentAlgorithm === 'sr') {
-        // Pass discountFactor needed by calculateVValueSR
-        return calculateVValueSR(state, mTable, wTable, gridSize, discountFactor);
-    } else {
-        // For Q-learning, SARSA, etc., value is max Q(s,a) from qTable
-        if (!qTable || !qTable[state]) return 0;
-        let maxQ = -Infinity;
-        for (const action of actions) {
-            if (qTable[state][action] !== undefined && qTable[state][action] > maxQ) {
-                maxQ = qTable[state][action];
+    try {
+        // Use the helper function
+        return getValueForState(state);
+    } catch (error) {
+        console.warn('Error accessing algorithm value, falling back to direct table access:', error);
+        
+        // Fallback to direct table access
+        if (currentAlgorithm === 'actor-critic') {
+            return vTable[state] !== undefined ? vTable[state] : 0;
+        } else if (currentAlgorithm === 'sr') {
+            return calculateVValueSR(state, mTable, wTable, gridSize, getDiscountFactor()); // Use getter
+        } else {
+            if (!qTable || !qTable[state]) return 0;
+            let maxQ = -Infinity;
+            for (const action of actions) {
+                if (qTable[state][action] !== undefined && qTable[state][action] > maxQ) {
+                    maxQ = qTable[state][action];
+                }
             }
+            return maxQ === -Infinity ? 0 : maxQ;
         }
-        return maxQ === -Infinity ? 0 : maxQ;
     }
 }
-
 
 // Helper function to find min/max V(s) across the grid
 function getMinMaxValues(gridSize, qTable, vTable, mTable, wTable, currentAlgorithm) {
@@ -356,67 +361,59 @@ function valueToColor(value, minV, maxV) {
     }
 }
 
-// --- NEW: Moved color interpolation function from script.js ---
-// Helper function to interpolate color between prob-zero and prob-one vars
+// Add this helper function near the top:
+function parseColorFromCSS(cssVar) {
+    const colorStr = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim();
+    
+    // Try hex format first
+    const hexMatch = colorStr.match(/#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})/);
+    if (hexMatch) {
+        return { r: parseInt(hexMatch[1], 16), g: parseInt(hexMatch[2], 16), b: parseInt(hexMatch[3], 16) };
+    }
+    
+    // Try rgb format
+    const rgbMatch = colorStr.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (rgbMatch) {
+        return { r: parseInt(rgbMatch[1]), g: parseInt(rgbMatch[2]), b: parseInt(rgbMatch[3]) };
+    }
+    
+    // Fallback
+    return { r: 128, g: 128, b: 128 };
+}
+
+function adjustColorAlpha(cssVar, intensity) {
+    const baseColor = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim();
+    const rgbaMatch = baseColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+    if (rgbaMatch) {
+        const originalAlpha = parseFloat(rgbaMatch[4] || '1');
+        const newAlpha = Math.max(0.1, originalAlpha * intensity);
+        return `rgba(${rgbaMatch[1]}, ${rgbaMatch[2]}, ${rgbaMatch[3]}, ${newAlpha})`;
+    }
+    return baseColor;
+}
+
+// Simplify interpolateProbColor function:
 export function interpolateProbColor(prob) {
-    // Helper to parse RGB color from CSS variable
-    const parseColor = (cssVar) => {
-        const colorStr = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim();
-        const match = colorStr.match(/#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})/);
-        if (match) {
-            return { r: parseInt(match[1], 16), g: parseInt(match[2], 16), b: parseInt(match[3], 16) };
-        }
-        const rgbMatch = colorStr.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-         if (rgbMatch) {
-            return { r: parseInt(rgbMatch[1]), g: parseInt(rgbMatch[2]), b: parseInt(rgbMatch[3]) };
-        }
-        // Fallback (shouldn't happen with defined vars)
-        return { r: 128, g: 128, b: 128 };
-    };
-
-    const colorStart = parseColor('--color-prob-zero'); // Low probability color
-    const colorEnd = parseColor('--color-prob-one');   // High probability color
-
+    const colorStart = parseColorFromCSS('--color-prob-zero');
+    const colorEnd = parseColorFromCSS('--color-prob-one');
     const p = Math.max(0, Math.min(1, prob));
-
+    
     const r = Math.round(colorStart.r + (colorEnd.r - colorStart.r) * p);
     const g = Math.round(colorStart.g + (colorEnd.g - colorStart.g) * p);
     const b = Math.round(colorStart.b + (colorEnd.b - colorStart.b) * p);
-
+    
     return `rgb(${r}, ${g}, ${b})`;
-};
-// --- END NEW ---
+}
 
-// --- NEW: Helper function to map SR value (non-negative) to Grayscale color using CSS vars ---
+// Simplify srValueToColor function:
 function srValueToColor(value, maxM) {
     const epsilon = 1e-6;
-
-    // Helper to parse RGBA color and adjust alpha
-    const adjustAlpha = (cssVar, intensity) => {
-        const baseColor = getComputedStyle(document.documentElement).getPropertyValue(cssVar).trim();
-        const rgbaMatch = baseColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
-        if (rgbaMatch) {
-            const originalAlpha = parseFloat(rgbaMatch[4] || '1');
-            const newAlpha = Math.max(0.1, originalAlpha * intensity); // Scale alpha, ensure min visibility
-            return `rgba(${rgbaMatch[1]}, ${rgbaMatch[2]}, ${rgbaMatch[3]}, ${newAlpha})`;
-        }
-        return baseColor; // Fallback
-    };
-
-
     if (maxM < epsilon || value < epsilon) {
-        // Use the minimum SR value background color, full alpha (or adjusted based on variable)
-        return adjustAlpha('--color-sr-value-bg-min', 1.0);
+        return adjustColorAlpha('--color-sr-value-bg-min', 1.0);
     }
-    // Normalize value: [0, maxM] -> intensity [0, 1]
     const intensity = Math.min(1, Math.max(0, value / maxM));
-
-    // Interpolate between min color (intensity 0) and max color (intensity 1)
-    // This basic implementation just uses the max color and adjusts its alpha.
-    // A true gradient interpolation between two RGBA colors would be more complex.
-    return adjustAlpha('--color-sr-value-bg-max', intensity);
+    return adjustColorAlpha('--color-sr-value-bg-max', intensity);
 }
-// --- END NEW ---
 
 // --- NEW: Function to draw the SR Vector M(hoveredState, :) ---
 export function drawSRVector(ctx, gridSize, cellSize, hoveredStateKey, mTable, showSRText = true) {
