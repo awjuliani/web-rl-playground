@@ -14,7 +14,8 @@ import {
     setGemRewardMagnitude, // NEW: Import gem reward setter
     setBadStateRewardMagnitude, // NEW: Import bad state reward setter
     rewardMagnitudeGem as initialGemReward, // NEW: Import initial gem reward
-    rewardMagnitudeBad as initialBadReward // NEW: Import initial bad reward
+    rewardMagnitudeBad as initialBadReward, // NEW: Import initial bad reward
+    drawSRWVector, // NEW: Import SR W vector drawing function
 } from './environment.js';
 
 import {
@@ -125,6 +126,7 @@ const srMLrValueSpan = document.getElementById('srMLrValue');
 const srWLRControl = document.getElementById('srWLRControl');
 const srWLrSlider = document.getElementById('srWLrSlider');
 const srWLrValueSpan = document.getElementById('srWLrValue');
+const srWVectorDisplayOption = document.getElementById('srWVectorDisplayOption'); // NEW: Get the W vector option
 
 // --- NEW: Collapsible Settings Handler ---
 function initializeCollapsibles() {
@@ -252,6 +254,8 @@ function drawEverything() {
         } else {
             // Optionally draw a placeholder if nothing is hovered
         }
+    } else if (cellDisplayMode === 'sr-w-vector') { // NEW: W vector display
+        drawSRWVector(ctx, gridSize, cellSize, wTable, true);
     }
     // else (cellDisplayMode === 'none') -> grid lines below will show through
 
@@ -882,7 +886,8 @@ function updateControlVisibility(algorithm, explorationStrategy) {
         srMLR: srMLRControl,
         srWLR: srWLRControl,
         srVectorAgent: srVectorAgentDisplayOption,
-        srVectorHover: srVectorHoverDisplayOption
+        srVectorHover: srVectorHoverDisplayOption,
+        srWVector: srWVectorDisplayOption // NEW: Add W vector control
     };
 
     // Hide all controls initially
@@ -901,6 +906,7 @@ function updateControlVisibility(algorithm, explorationStrategy) {
         controls.srWLR.style.display = '';
         controls.srVectorAgent.style.display = '';
         controls.srVectorHover.style.display = '';
+        controls.srWVector.style.display = ''; // NEW: Show W vector option for SR
         updateExplorationControlVisibility(explorationStrategy);
     } else {
         controls.strategy.style.display = '';
@@ -918,7 +924,7 @@ algorithmSelect.addEventListener('change', () => {
     updateControlVisibility(newAlgo, explorationStrategySelect.value);
     
     // Handle display mode visibility for SR
-    if (newAlgo !== 'sr' && (cellDisplayModeSelect.value === 'sr-vector' || cellDisplayModeSelect.value === 'sr-vector-hover')) {
+    if (newAlgo !== 'sr' && (cellDisplayModeSelect.value === 'sr-vector' || cellDisplayModeSelect.value === 'sr-vector-hover' || cellDisplayModeSelect.value === 'sr-w-vector')) {
         cellDisplayModeSelect.value = 'values-color';
         cellDisplayMode = 'values-color';
     }
@@ -1149,6 +1155,7 @@ async function initializeApp() {
     if (getSelectedAlgorithm() === 'sr') {
         srVectorAgentDisplayOption.style.display = '';
         srVectorHoverDisplayOption.style.display = '';
+        srWVectorDisplayOption.style.display = ''; // NEW: Show W vector option
         // Show SR specific LR controls
         srMLRControl.style.display = '';
         srWLRControl.style.display = '';
@@ -1157,11 +1164,12 @@ async function initializeApp() {
     } else {
         srVectorAgentDisplayOption.style.display = 'none';
         srVectorHoverDisplayOption.style.display = 'none';
-         // Ensure the default selected value isn't one of the hidden SR options on load
-         if (cellDisplayModeSelect.value === 'sr-vector' || cellDisplayModeSelect.value === 'sr-vector-hover') {
-             cellDisplayModeSelect.value = 'values-color';
-             cellDisplayMode = 'values-color';
-         }
+        srWVectorDisplayOption.style.display = 'none'; // NEW: Hide W vector option
+        // Ensure the default selected value isn't one of the hidden SR options on load
+        if (cellDisplayModeSelect.value === 'sr-vector' || cellDisplayModeSelect.value === 'sr-vector-hover' || cellDisplayModeSelect.value === 'sr-w-vector') {
+            cellDisplayModeSelect.value = 'values-color';
+            cellDisplayMode = 'values-color';
+        }
     }
     // --- End SR Display Option Visibility ---
 

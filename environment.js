@@ -476,7 +476,6 @@ export function drawSRVector(ctx, gridSize, cellSize, hoveredStateKey, mTable, s
         }
     }
 }
-// --- END NEW ---
 
 // Function to draw the value function V(s) or max Q(s,a) overlay
 export function drawValues(ctx, gridSize, cellSize, qTable, vTable, mTable, wTable, currentAlgorithm, showValueText) {
@@ -726,13 +725,10 @@ export function drawPolicyArrows(ctx, gridSize, cellSize, qTable, hTable, mTable
             let actionProb = 0;
 
             if (bestActions.length === 0 || !actions.some(a => actionProbs[a] > 0)) {
-                 // If no best action or zero probabilities (shouldn't happen with softmax/init)
                 charToDraw = '●';
                 actionProb = 0.5; // Default grey
             } else {
-                // Pick the first best action to determine the arrow character
                 const actionToDraw = bestActions[0];
-                 // Handle potential undefined probability (though calculateSoftmaxProbabilities has fallback)
                 actionProb = actionProbs[actionToDraw] || (1.0 / actions.length);
 
                 switch (actionToDraw) {
@@ -744,13 +740,97 @@ export function drawPolicyArrows(ctx, gridSize, cellSize, qTable, hTable, mTable
                 }
             }
 
-            // Set the fill color based on the action's probability using the interpolation function
             ctx.fillStyle = interpolateProbColor(actionProb);
-
-            // Draw the selected character centered in the cell
             ctx.fillText(charToDraw, centerX, centerY);
         }
     }
-    // --- Reset text properties ---
-    // ctx.fillStyle = '#000';
+}
+
+export function drawSRWVector(ctx, gridSize, cellSize, wTable, showWText = true) {
+    if (!wTable) {
+        return;
+    }
+
+    let maxW = -Infinity;
+    let minW = Infinity;
+
+    for (let x = 0; x < gridSize; x++) {
+        for (let y = 0; y < gridSize; y++) {
+            const state = `${x},${y}`;
+            const value = wTable[state] ?? 0;
+            if (value > maxW) maxW = value;
+            if (value < minW) minW = value;
+        }
+    }
+    if (maxW === -Infinity) maxW = 0;
+    if (minW === Infinity) minW = 0;
+
+    const fontSize = Math.max(8, Math.floor(cellSize * 0.20));
+    ctx.font = `${fontSize}px ${getComputedStyle(document.documentElement).getPropertyValue('--font-mono') || 'monospace'}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    for (let x = 0; x < gridSize; x++) {
+        for (let y = 0; y < gridSize; y++) {
+            const state = `${x},${y}`;
+            const wValue = wTable[state] ?? 0;
+            
+            const color = wValueToColor(wValue, minW, maxW);
+
+            ctx.fillStyle = color;
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+
+            if (showWText) {
+                const textX = x * cellSize + cellSize / 2;
+                const textY = y * cellSize + cellSize / 2;
+
+                ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--color-sr-value-text');
+                ctx.shadowColor = getComputedStyle(document.documentElement).getPropertyValue('--color-sr-value-text-shadow');
+                ctx.shadowBlur = 2;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+
+                ctx.fillText(wValue.toFixed(2), textX, textY);
+
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+            }
+        }
+    }
+}
+
+function wValueToColor(value, minW, maxW) {
+    const epsilon = 1e-6;
+
+    if (Math.abs(maxW - minW) < epsilon || Math.abs(value) < epsilon) {
+        return getComputedStyle(document.documentElement).getPropertyValue('--color-value-zero-bg');
+    }
+
+    let colorVar;
+
+    if (value > 0) {
+        colorVar = '--color-value-pos-bg';
+        if (maxW <= epsilon) return getComputedStyle(document.documentElement).getPropertyValue('--color-value-zero-bg');
+        const intensity = Math.min(1, Math.max(0, value / maxW));
+        const baseColor = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
+        const rgbaMatch = baseColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+        if (rgbaMatch) {
+            const originalAlpha = parseFloat(rgbaMatch[4] || '1');
+            const newAlpha = Math.max(0.1, originalAlpha * intensity);
+            return `rgba(${rgbaMatch[1]}, ${rgbaMatch[2]}, ${rgbaMatch[3]}, ${newAlpha})`;
+        }
+        return baseColor;
+    } else {
+        colorVar = '--color-value-neg-bg';
+        if (minW >= -epsilon) return getComputedStyle(document.documentElement).getPropertyValue('--color-value-zero-bg');
+        const intensity = Math.min(1, Math.max(0, value / minW));
+        const baseColor = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
+        const rgbaMatch = baseColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+        if (rgbaMatch) {
+            const originalAlpha = parseFloat(rgbaMatch[4] || '1');
+            const newAlpha = Math.max(0.1, originalAlpha * intensity);
+            return `rgba(${rgbaMatch[1]}, ${rgbaMatch[2]}, ${rgbaMatch[3]}, ${newAlpha})`;
+        }
+        return baseColor;
+    }
 }
