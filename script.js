@@ -29,8 +29,10 @@ import {
     updateSelectedAlgorithm, applyMonteCarloUpdates,
     getActionProbabilities, getBestActions, calculateQValueSR,
     // Keep specific learning rates and their update functions
-    actorLearningRate, criticLearningRate, srMWeightLearningRate, srWWeightLearningRate,
-    updateActorLearningRate, updateCriticLearningRate, updateSRMLearningRate, updateSRWLearningRate,
+    getActorLearningRate, getCriticLearningRate,
+    getSRMWeightLearningRate, getSRWWeightLearningRate,
+    updateActorLearningRate, updateCriticLearningRate,
+    updateSRMLearningRate, updateSRWLearningRate,
 } from './algorithms.js';
 
 // --- State Variables ---
@@ -95,7 +97,6 @@ const speedValueSpan = document.getElementById('speedValue');
 const qValueDisplayDiv = document.getElementById('qValueDisplay');
 const qValueDisplayHeader = document.querySelector('#qValueDisplay .collapsible-header');
 const qGridDiv = document.querySelector('#qValueDisplay .q-grid');
-const qStateSpan = document.getElementById('qState');
 const qUpSpan = document.getElementById('qUp');
 const qDownSpan = document.getElementById('qDown');
 const qLeftSpan = document.getElementById('qLeft');
@@ -113,20 +114,30 @@ const explorationExplanationDiv = document.getElementById('explorationExplanatio
 const maxStepsSlider = document.getElementById('maxStepsSlider');
 const maxStepsValueSpan = document.getElementById('maxStepsValue');
 const rewardChartCanvas = document.getElementById('rewardChartCanvas');
-const srVectorAgentDisplayOption = document.getElementById('srVectorAgentDisplayOption'); // Renamed from srVectorDisplayOption
-const srVectorHoverDisplayOption = document.getElementById('srVectorHoverDisplayOption'); // NEW: Get the hover option
-const themeToggleCheckbox = document.getElementById('theme-checkbox'); // NEW: Theme toggle
-const gemRewardSlider = document.getElementById('gemRewardSlider'); // NEW
-const gemRewardValueSpan = document.getElementById('gemRewardValue'); // NEW
-const badStateRewardSlider = document.getElementById('badStateRewardSlider'); // NEW
-const badStateRewardValueSpan = document.getElementById('badStateRewardValue'); // NEW
+const srVectorAgentDisplayOption = document.getElementById('srVectorAgentDisplayOption');
+const srVectorHoverDisplayOption = document.getElementById('srVectorHoverDisplayOption');
+const themeToggleCheckbox = document.getElementById('theme-checkbox');
+const gemRewardSlider = document.getElementById('gemRewardSlider');
+const gemRewardValueSpan = document.getElementById('gemRewardValue');
+const badStateRewardSlider = document.getElementById('badStateRewardSlider');
+const badStateRewardValueSpan = document.getElementById('badStateRewardValue');
+
+// Actor-Critic LR controls DOM Elements
+const actorCriticLRControl = document.getElementById('actorCriticLRControl');
+const actorLrSlider = document.getElementById('actorLrSlider');
+const actorLrValueSpan = document.getElementById('actorLrValue');
+const criticLRControl = document.getElementById('criticLRControl');
+const criticLrSlider = document.getElementById('criticLrSlider');
+const criticLrValueSpan = document.getElementById('criticLrValue');
+
+// SR LR controls DOM Elements
 const srMLRControl = document.getElementById('srMLRControl');
 const srMLrSlider = document.getElementById('srMLrSlider');
 const srMLrValueSpan = document.getElementById('srMLrValue');
 const srWLRControl = document.getElementById('srWLRControl');
 const srWLrSlider = document.getElementById('srWLrSlider');
 const srWLrValueSpan = document.getElementById('srWLrValue');
-const srWVectorDisplayOption = document.getElementById('srWVectorDisplayOption'); // NEW: Get the W vector option
+const srWVectorDisplayOption = document.getElementById('srWVectorDisplayOption');
 
 // --- NEW: Collapsible Settings Handler ---
 function initializeCollapsibles() {
@@ -829,6 +840,34 @@ async function loadExplanations() {
     }
 }
 
+// --- NEW: URL-based config persistence helpers ---
+function getCurrentConfigParams() {
+    const params = new URLSearchParams();
+    params.set('algo', getSelectedAlgorithm());
+    params.set('strategy', getExplorationStrategy());
+    params.set('lr', getLearningRate().toString());
+    params.set('discount', getDiscountFactor().toString());
+    params.set('epsilon', getExplorationRate().toString());
+    params.set('beta', getSoftmaxBeta().toString());
+    params.set('actorLr', getActorLearningRate().toString());
+    params.set('criticLr', getCriticLearningRate().toString());
+    params.set('srMLr', getSRMWeightLearningRate().toString());
+    params.set('srWLr', getSRWWeightLearningRate().toString());
+    params.set('grid', gridSize.toString());
+    params.set('display', cellDisplayMode);
+    params.set('stepPenalty', stepPenaltySlider.value);
+    params.set('gemReward', gemRewardSlider.value);
+    params.set('badReward', badStateRewardSlider.value);
+    params.set('maxSteps', maxStepsPerEpisode.toString());
+    params.set('speed', speedSlider.value);
+    params.set('terminate', terminateOnGem ? '1' : '0');
+    return params;
+}
+function updateURL() {
+    const qs = getCurrentConfigParams().toString();
+    history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
+}
+
 // --- Event Listeners ---
 startButton.addEventListener('click', startLearning);
 stopButton.addEventListener('click', stopLearning);
@@ -836,12 +875,13 @@ resetAgentButton.addEventListener('click', resetAgentLogic);
 resetEnvironmentButton.addEventListener('click', resetEnvironmentLogic);
 
 // Add this helper function near the top:
-function createSliderHandler(updateFunction, valueSpan, formatter = (v) => v.toFixed(2)) {
+function createSliderHandler(updateFunction, valueSpan, formatter = v => v.toFixed(2)) {
     return (slider) => {
         slider.addEventListener('input', () => {
             const value = parseFloat(slider.value);
             updateFunction(value);
             valueSpan.textContent = formatter(value);
+            updateURL(); // ← push into URL whenever a slider moves
         });
     };
 }
@@ -872,6 +912,7 @@ gridSizeSlider.addEventListener('input', () => {
 
         console.log("Grid size changed, full reset performed.");
     }
+    updateURL(); // ← record it
 });
 
 // Add this helper function:
@@ -922,15 +963,13 @@ algorithmSelect.addEventListener('change', () => {
     updateSelectedAlgorithm(newAlgo);
     updateExplanationText();
     updateControlVisibility(newAlgo, explorationStrategySelect.value);
-    
-    // Handle display mode visibility for SR
-    if (newAlgo !== 'sr' && (cellDisplayModeSelect.value === 'sr-vector' || cellDisplayModeSelect.value === 'sr-vector-hover' || cellDisplayModeSelect.value === 'sr-w-vector')) {
+    if (!['sr'].includes(newAlgo) && ['sr-vector','sr-vector-hover','sr-w-vector'].includes(cellDisplayModeSelect.value)) {
         cellDisplayModeSelect.value = 'values-color';
         cellDisplayMode = 'values-color';
     }
-    
     resetAgentLogic();
-    console.log("Algorithm changed to:", newAlgo, "- Agent reset.");
+    console.log("Algorithm changed to:", newAlgo);
+    updateURL(); // ← record it
 });
 
 // Helper function to update exploration control visibility
@@ -951,20 +990,24 @@ function updateExplorationControlVisibility(strategy) {
 explorationStrategySelect.addEventListener('change', () => {
     if (getSelectedAlgorithm() !== 'actor-critic') {
         stopLearning();
-        const newStrategy = explorationStrategySelect.value;
-        updateExplorationStrategy(newStrategy);
+        const strat = explorationStrategySelect.value;
+        updateExplorationStrategy(strat);
         updateExplanationText();
-
-        // Update slider visibility based on the newly selected strategy
-        updateExplorationControlVisibility(newStrategy);
-
+        updateExplorationControlVisibility(strat);
         drawEverything();
-        console.log("Exploration strategy changed to:", newStrategy);
+        console.log("Exploration strategy changed to:", strat);
+        updateURL(); // ← record it
     }
 });
 
-terminateOnRewardCheckbox.addEventListener('change', updateTerminateOnGemSetting);
-speedSlider.addEventListener('input', updateSpeed);
+terminateOnRewardCheckbox.addEventListener('change', () => {
+    updateTerminateOnGemSetting();
+    updateURL(); // ← record it
+});
+speedSlider.addEventListener('input', () => {
+    updateSpeed();
+    updateURL(); // ← record it
+});
 
 // REMOVED: Allow clicking while learning
 canvas.addEventListener('click', (event) => {
@@ -1004,10 +1047,8 @@ canvas.addEventListener('click', (event) => {
 cellDisplayModeSelect.addEventListener('change', () => {
     cellDisplayMode = cellDisplayModeSelect.value;
     console.log("Cell display mode changed to:", cellDisplayMode);
-
-    // Redraw immediately to reflect the change
-    // No need to check isLearning, drawEverything() should work regardless
     drawEverything();
+    updateURL(); // ← record it
 });
 
 // Event listener for Max Steps slider
@@ -1015,7 +1056,7 @@ maxStepsSlider.addEventListener('input', () => {
     const value = parseInt(maxStepsSlider.value, 10);
     maxStepsPerEpisode = value;
     maxStepsValueSpan.textContent = value.toString();
-    // No reset needed here, will take effect on next episode end
+    updateURL(); // ← record it
 });
 
 // --- NEW: Theme Switching Logic ---
@@ -1095,113 +1136,120 @@ themeToggleCheckbox.addEventListener('change', () => {
 
 // --- Initial Setup ---
 async function initializeApp() {
-    // NEW: Set initial theme based on localStorage or system preference
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    // NEW: read URL params and re-apply
+    const urlParams = new URLSearchParams(window.location.search);
 
-    // Determine initial theme: saved preference > system preference > default (light)
-    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
-    setTheme(initialTheme); // Apply the initial theme (this also sets currentTheme var)
-
-    stopButton.disabled = true;
-    resetAgentButton.disabled = true;
-    resetEnvironmentButton.disabled = true;
-
-    gridSizeSlider.value = gridSize;
-    stepPenaltySlider.value = parseFloat(stepPenaltySlider.value);
-    maxStepsSlider.value = maxStepsPerEpisode;
-    explorationStrategySelect.value = getExplorationStrategy();
-    algorithmSelect.value = getSelectedAlgorithm();
-    cellDisplayModeSelect.value = cellDisplayMode;
-    terminateOnRewardCheckbox.checked = terminateOnGem;
-
-    // Update the parameters in algorithms.js and environment.js to match initial UI/defaults
-    updateLearningRate(getLearningRate());
-    updateDiscountFactor(getDiscountFactor());
-    updateExplorationRate(getExplorationRate());
-    updateSoftmaxBeta(getSoftmaxBeta());
-    updateExplorationStrategy(getExplorationStrategy());
-    updateSelectedAlgorithm(getSelectedAlgorithm());
-    setStepPenalty(parseFloat(stepPenaltySlider.value));
-    setGemRewardMagnitude(initialGemReward);
-    setBadStateRewardMagnitude(initialBadReward);
-    updateTerminateOnGemSetting();
-    maxStepsPerEpisode = parseInt(maxStepsSlider.value, 10);
-
-    // Set initial UI values for new sliders
-    gemRewardSlider.value = initialGemReward;
-    gemRewardValueSpan.textContent = initialGemReward;
-    badStateRewardSlider.value = initialBadReward;
-    badStateRewardValueSpan.textContent = initialBadReward;
-
-    // Set initial visibility for exploration AND specific LR controls based on INITIAL algorithm and STRATEGY
-    const strategyField = explorationStrategySelect.parentElement;
-    const epsilonField = epsilonSlider.parentElement.parentElement;
-
-    // Hide all specific LR controls by default
-    actorCriticLRControl.style.display = 'none';
-    criticLRControl.style.display = 'none';
-    srMLRControl.style.display = 'none';
-    srWLRControl.style.display = 'none';
-    // Hide exploration strategy/epsilon/softmax controls initially, show as needed
-    if (strategyField) strategyField.style.display = 'none';
-    if (epsilonField) epsilonField.style.display = 'none';
-    softmaxBetaControl.style.display = 'none';
-    // Hide main LR slider by default, show as needed
-    if (lrControl) lrControl.style.display = 'none';
-
-
-    // --- Set initial visibility for SR display options AND specific LR controls ---
-    if (getSelectedAlgorithm() === 'sr') {
-        srVectorAgentDisplayOption.style.display = '';
-        srVectorHoverDisplayOption.style.display = '';
-        srWVectorDisplayOption.style.display = ''; // NEW: Show W vector option
-        // Show SR specific LR controls
-        srMLRControl.style.display = '';
-        srWLRControl.style.display = '';
-        // Hide main LR control for SR
-        if (lrControl) lrControl.style.display = 'none';
-    } else {
-        srVectorAgentDisplayOption.style.display = 'none';
-        srVectorHoverDisplayOption.style.display = 'none';
-        srWVectorDisplayOption.style.display = 'none'; // NEW: Hide W vector option
-        // Ensure the default selected value isn't one of the hidden SR options on load
-        if (cellDisplayModeSelect.value === 'sr-vector' || cellDisplayModeSelect.value === 'sr-vector-hover' || cellDisplayModeSelect.value === 'sr-w-vector') {
-            cellDisplayModeSelect.value = 'values-color';
-            cellDisplayMode = 'values-color';
+    if (urlParams.has('algo')) {
+        const a = urlParams.get('algo');
+        if ([ 'q-learning','sarsa','expected-sarsa','monte-carlo','actor-critic','sr' ].includes(a)) {
+            algorithmSelect.value = a;
+            updateSelectedAlgorithm(a);
         }
     }
-    // --- End SR Display Option Visibility ---
-
-
-    // --- Set initial visibility for Exploration AND AC/SR specific LR controls ---
-    if (getSelectedAlgorithm() === 'actor-critic') {
-         // AC uses softmax implicitly, show Beta control
-        softmaxBetaControl.style.display = '';
-        // Show Actor-Critic specific LR controls
-        actorCriticLRControl.style.display = '';
-        criticLRControl.style.display = '';
-        // Hide main LR control for AC
-        if (lrControl) lrControl.style.display = 'none';
-        // Hide general exploration strategy/epsilon
-        if (strategyField) strategyField.style.display = 'none';
-        if (epsilonField) epsilonField.style.display = 'none';
-    } else { // Handles QL, SARSA, ES, MC, SR (non-AC algos)
-         // Show standard exploration strategy controls
-         if (strategyField) strategyField.style.display = '';
-         // Update visibility based on the INITIAL strategy
-         updateExplorationControlVisibility(getExplorationStrategy());
-
-         if (getSelectedAlgorithm() === 'sr') {
-             // SR specific LR controls (srWLRControl) are already shown above
-             // Main LR control is already hidden above
-         } else { // QL, SARSA, ES, MC
-             // Show main LR control for these algorithms
-             if (lrControl) lrControl.style.display = '';
-             // Ensure AC/SR specific LR controls remain hidden (done by default at start)
-         }
+    if (urlParams.has('strategy')) {
+        const s = urlParams.get('strategy');
+        if ([ 'epsilon-greedy','softmax','random','greedy' ].includes(s)) {
+            explorationStrategySelect.value = s;
+            updateExplorationStrategy(s);
+        }
     }
-    // --- End Initial Exploration/Specific LR Visibility ---
+    if (urlParams.has('lr')) {
+        const v = parseFloat(urlParams.get('lr'));
+        if (!isNaN(v) && lrSlider && lrValueSpan) { updateLearningRate(v); lrSlider.value = v; lrValueSpan.textContent = v.toFixed(2); }
+    }
+    if (urlParams.has('discount')) {
+        const v = parseFloat(urlParams.get('discount'));
+        if (!isNaN(v) && discountSlider && discountValueSpan) { updateDiscountFactor(v); discountSlider.value = v; discountValueSpan.textContent = v.toFixed(2); }
+    }
+    if (urlParams.has('epsilon')) {
+        const v = parseFloat(urlParams.get('epsilon'));
+        if (!isNaN(v) && epsilonSlider && epsilonValueSpan) { updateExplorationRate(v); epsilonSlider.value = v; epsilonValueSpan.textContent = v.toFixed(2); }
+    }
+    if (urlParams.has('beta')) {
+        const v = parseFloat(urlParams.get('beta'));
+        if (!isNaN(v) && softmaxBetaSlider && softmaxBetaValueSpan) { updateSoftmaxBeta(v); softmaxBetaSlider.value = v; softmaxBetaValueSpan.textContent = v.toFixed(1); }
+    }
+    if (urlParams.has('actorLr')) {
+        const v = parseFloat(urlParams.get('actorLr'));
+        if (!isNaN(v) && actorLrSlider && actorLrValueSpan) { // Check elements
+            updateActorLearningRate(v); 
+            actorLrSlider.value = v; 
+            actorLrValueSpan.textContent = v.toFixed(2); 
+        }
+    }
+    if (urlParams.has('criticLr')) {
+        const v = parseFloat(urlParams.get('criticLr'));
+        if (!isNaN(v) && criticLrSlider && criticLrValueSpan) { // Check elements
+            updateCriticLearningRate(v); 
+            criticLrSlider.value = v; 
+            criticLrValueSpan.textContent = v.toFixed(2); 
+        }
+    }
+    if (urlParams.has('srMLr')) {
+        const v = parseFloat(urlParams.get('srMLr'));
+        if (!isNaN(v) && srMLrSlider && srMLrValueSpan) { // Check elements
+            updateSRMLearningRate(v); 
+            srMLrSlider.value = v; 
+            srMLrValueSpan.textContent = v.toFixed(2); 
+        }
+    }
+    if (urlParams.has('srWLr')) {
+        const v = parseFloat(urlParams.get('srWLr'));
+        if (!isNaN(v) && srWLrSlider && srWLrValueSpan) { // Check elements
+            updateSRWLearningRate(v); 
+            srWLrSlider.value = v; 
+            srWLrValueSpan.textContent = v.toFixed(2); 
+        }
+    }
+    if (urlParams.has('grid')) {
+        const g = parseInt(urlParams.get('grid'),10);
+        if (!isNaN(g) && gridSizeSlider && gridSizeValueSpan) {
+            const fake = { value: g.toString() };
+            const { gridSize: newG, cellSize: newC, updated } = updateGridSize(fake, gridSize); // ensure 'updated' is handled if necessary, though resetAllAndDraw later will use the new gridSize
+            gridSize = newG; cellSize = newC; // Directly update global gridSize and cellSize
+            gridSizeSlider.value = newG; gridSizeValueSpan.textContent = newG.toString();
+            // If updateGridSize itself doesn't call reset/redraw, ensure it happens. 
+            // resetAllAndDraw() at the end of initializeApp will handle the full reset based on this new grid size.
+        }
+    }
+    if (urlParams.has('display')) {
+        const d = urlParams.get('display');
+        if (cellDisplayModeSelect && Array.from(cellDisplayModeSelect.options).some(o=>o.value===d)) {
+            cellDisplayModeSelect.value = d;
+            cellDisplayMode = d;
+        }
+    }
+    if (urlParams.has('stepPenalty')) {
+        const v = parseFloat(urlParams.get('stepPenalty'));
+        if (!isNaN(v) && stepPenaltySlider && stepPenaltyValueSpan) { setStepPenalty(v); stepPenaltySlider.value = v; stepPenaltyValueSpan.textContent = v.toFixed(1); }
+    }
+    if (urlParams.has('gemReward')) {
+        const v = parseFloat(urlParams.get('gemReward'));
+        if (!isNaN(v) && gemRewardSlider && gemRewardValueSpan) { setGemRewardMagnitude(v); gemRewardSlider.value = v; gemRewardValueSpan.textContent = v.toString(); }
+    }
+    if (urlParams.has('badReward')) {
+        const v = parseFloat(urlParams.get('badReward'));
+        if (!isNaN(v) && badStateRewardSlider && badStateRewardValueSpan) { setBadStateRewardMagnitude(v); badStateRewardSlider.value = v; badStateRewardValueSpan.textContent = v.toString(); }
+    }
+    if (urlParams.has('maxSteps')) {
+        const v = parseInt(urlParams.get('maxSteps'),10);
+        if (!isNaN(v) && maxStepsSlider && maxStepsValueSpan) { maxStepsPerEpisode = v; maxStepsSlider.value = v; maxStepsValueSpan.textContent = v.toString(); }
+    }
+    if (urlParams.has('speed')) {
+        const v = parseInt(urlParams.get('speed'),10);
+        if (!isNaN(v) && speedSlider) { speedSlider.value = v; updateSpeed(); }
+    }
+    if (urlParams.has('terminate')) {
+        const t = urlParams.get('terminate');
+        const b = (t==='1' || t==='true'); // Handles '1' or 'true' as true
+        if (terminateOnRewardCheckbox) terminateOnRewardCheckbox.checked = b;
+        // setTheme; // This line seems incomplete/incorrect from the previous diff, should be removed or be setTheme(themeValue) if theme is in URL
+        updateTerminateOnGemSetting(); // This will read from the checkbox
+    }
+    // Now fix your control-visibility and explanations:
+    updateControlVisibility(getSelectedAlgorithm(), getExplorationStrategy()); // Ensure this is called after all params are set
+    updateExplanationText(); // Ensure this is called after algo/strategy are set
+    // ... then continue with initializeCollapsibles() as before ...
 
     initializeCollapsibles();
 

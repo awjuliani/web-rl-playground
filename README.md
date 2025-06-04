@@ -31,6 +31,7 @@ An interactive web-based demonstration of fundamental tabular Reinforcement Lear
     *   **Step Penalty:** Influences the agent's path preference.
     *   **Max Steps per Episode:** Defines episode termination conditions.
     *   **Simulation Speed:** Controls visualization pace.
+*   **Shareable Configurations:** Save and share complete algorithm and environment settings via URL parameters.
 *   **Visualizations:** Providing insights into the learning process and learned knowledge.
     *   Real-time agent movement and learning.
     *   Animated floating text for rewards received.
